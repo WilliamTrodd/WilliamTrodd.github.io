@@ -62,7 +62,7 @@ const App = () => {
             <p className="text-md md:text-lg text-slate-700">
               I've been working as a computer science teacher for 5 years, passing on my knowledge to the next generation of developers.
               I've taught Python, Kotlin, JavaScript, and in my own development journey have used Java and TypeScript.
-              Lately I've been focussed on full-stack web development, building small-scale solutions for ed-tech problems.
+              Lately I've been focussed on full-stack web development with the aim of moving into the climate tech sector.
               <br />
               <br />
               I'm a big fan of FOSS, having relied on it to get me through school, and I'm always on the lookout for new interesting projects to support.
@@ -77,7 +77,9 @@ const App = () => {
         <ComputerDesktopIcon className="h-16 w-16 text-blue-300 flex my-6" />
         <div className="text-4xl font-bold text-slate-600 flex">Web Development</div>
         <div className="flex py-4">
-          Developing software for the web gives us an incredible opportunity to share tools with the world.
+          Developing software for the web gives us an incredible opportunity to share tools with the world. 
+          Despite working in Computer Science education for the last 5 years, my background is in Environmental Science. 
+          I'm very interested in the future of climate tech, and how we can apply CS solutions to climate problems.
         </div>
       </div>
       <div className="flex flex-col items-center p-20">
