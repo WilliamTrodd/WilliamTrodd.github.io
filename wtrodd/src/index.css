@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* nav is sticky — stop anchor targets landing underneath it */
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    @apply bg-zinc-950 text-zinc-400 antialiased;
+  }
+
+  ::selection {
+    @apply bg-orange-500/30 text-zinc-50;
+  }
+
+  /* Keyboard focus stays visible against the dark ground. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-orange-400 ring-offset-2 ring-offset-zinc-950;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
