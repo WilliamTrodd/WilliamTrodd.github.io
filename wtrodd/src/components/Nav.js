@@ -1,4 +1,4 @@
-const links = ['work', 'about', 'contact']
+const links = ['tools', 'work', 'about', 'contact']
 
 const Nav = () => (
   <header className="sticky top-0 z-50 border-b border-white/5 bg-zinc-950/70 backdrop-blur-md">

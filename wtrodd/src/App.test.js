@@ -1,6 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import App from './App';
 import projects from './data/projects';
+import tools from './data/tools';
 
 test('names the site owner in the page h1', () => {
   render(<App />);
@@ -37,7 +38,7 @@ test('every project row lists its tech stack', () => {
 test('nav links point at the sections they name', () => {
   render(<App />);
   const nav = screen.getByRole('navigation');
-  ['work', 'about', 'contact'].forEach(label => {
+  ['tools', 'work', 'about', 'contact'].forEach(label => {
     const link = within(nav).getByRole('link', { name: new RegExp(`^${label}$`, 'i') });
     expect(link).toHaveAttribute('href', `#${label}`);
     // the anchor must resolve to a real element, or the nav is decorative
@@ -60,4 +61,27 @@ test('links that leave the site open safely in a new tab', () => {
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', expect.stringContaining('noreferrer'));
     });
+});
+
+test('renders one tool row per tool', () => {
+  render(<App />);
+  const section = screen.getByRole('region', { name: /tools/i });
+  expect(within(section).getAllByRole('link')).toHaveLength(tools.length);
+});
+
+test('every tool row links to its tool page', () => {
+  render(<App />);
+  const section = screen.getByRole('region', { name: /tools/i });
+  tools.forEach(tool => {
+    const row = within(section).getByRole('link', { name: new RegExp(tool.name, 'i') });
+    expect(row).toHaveAttribute('href', `/tools/${tool.slug}/`);
+  });
+});
+
+test('tool rows open in the same tab, unlike outbound project links', () => {
+  render(<App />);
+  const section = screen.getByRole('region', { name: /tools/i });
+  within(section).getAllByRole('link').forEach(row => {
+    expect(row).not.toHaveAttribute('target');
+  });
 });
