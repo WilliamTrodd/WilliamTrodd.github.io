@@ -18,7 +18,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "build:tools": "npm --prefix ../tools-src/worksheet-app install && npm --prefix ../tools-src/worksheet-app run build && rm -rf public/tools/worksheet-app && mkdir -p public/tools/worksheet-app && cp -R ../tools-src/worksheet-app/dist/. public/tools/worksheet-app/",
+    "build:tools": "node build-tools.js",
     "prebuild": "npm run build:tools",
     "predeploy": "npm run build",
     "deploy": "gh-pages -b master -d build"

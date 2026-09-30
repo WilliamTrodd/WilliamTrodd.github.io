@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Tilde">
+  <!-- Orange tile + dark tilde, echoing the site's ~/wt wordmark. A filled
+       tile rather than a dark one so the icon stays findable against dark
+       browser chrome. Drawn as a path, not a glyph, so it never depends on
+       an installed font. -->
+  <rect width="32" height="32" rx="7.5" fill="#FB923C"/>
+  <path d="M6.6 18.4C8.9 13.6 12.8 13.6 16 16C19.2 18.4 23.1 18.4 25.4 13.6"
+        fill="none" stroke="#18181B" stroke-width="3.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

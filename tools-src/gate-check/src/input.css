@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+   Design tokens. These stay as custom properties rather than Tailwind config
+   literals so the light/dark switch is a media query, not a class swap — the
+   tool has no theme toggle and must follow the OS. tailwind.config.js maps
+   each one to a utility name (bg-panel, text-ink, border-line, ...).
+   --------------------------------------------------------------------------- */
+:root {
+  --bg: #FAFAFA;
+  --panel: #FFFFFF;
+  --panel-2: #F4F4F5;
+  --line: #E4E4E7;
+  --line-strong: #D4D4D8;
+  --ink: #18181B;
+  --ink-dim: #52525B;
+  --ink-faint: #71717A;
+  --pc: #EA580C;
+  --pc-wash: #FFEDD5;
+  --pc-ink: #7C2D12;
+  --ok: #15803D;
+  --ok-wash: #DCFCE7;
+  --bad: #DC2626;
+  --bad-wash: #FEE2E2;
+  --kw: #3A56C9;
+  --shadow: rgba(24, 24, 27, 0.08);
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #09090B;
+    --panel: #18181B;
+    --panel-2: #1F1F23;
+    --line: #27272A;
+    --line-strong: #3F3F46;
+    --ink: #F4F4F5;
+    --ink-dim: #A1A1AA;
+    --ink-faint: #71717A;
+    --pc: #FB923C;
+    --pc-wash: #3A2410;
+    --pc-ink: #FDBA74;
+    --ok: #4ADE80;
+    --ok-wash: #14331F;
+    --bad: #F87171;
+    --bad-wash: #3A1A1A;
+    --kw: #93A9FF;
+    --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #09090B;
+  --panel: #18181B;
+  --panel-2: #1F1F23;
+  --line: #27272A;
+  --line-strong: #3F3F46;
+  --ink: #F4F4F5;
+  --ink-dim: #A1A1AA;
+  --ink-faint: #71717A;
+  --pc: #FB923C;
+  --pc-wash: #3A2410;
+  --pc-ink: #FDBA74;
+  --ok: #4ADE80;
+  --ok-wash: #14331F;
+  --bad: #F87171;
+  --bad-wash: #3A1A1A;
+  --kw: #93A9FF;
+  --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+@layer base {
+  html { background: var(--bg); }
+}
+
+/* ---------------------------------------------------------------------------
+   The remainder that utilities cannot express. Two kinds:
+
+   1. SVG internals. Tailwind has no utilities for stroke-linecap,
+      stroke-dasharray, text-anchor or the SVG `font` shorthand, and the
+      circuit is drawn by JS, so these classes live in template strings.
+   2. Selectors with no variant equivalent: `.lamp.on + .lamp-t` (sibling),
+      `.note:empty`, `::-webkit-details-marker`.
+
+   Deliberately NOT inside @layer components: unlayered CSS is never purged,
+   so classes the JS assembles by concatenation cannot vanish from the build.
+   --------------------------------------------------------------------------- */
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--bad); background: var(--bad); }
+.dot.off { background: transparent; opacity: 0.45; }
+details.controls > summary::-webkit-details-marker { display: none; }
+.chip { font: 500 0.82rem var(--sans); cursor: pointer; padding: 5px 11px; border-radius: 999px; color: var(--ink-dim); background: transparent; border: 1.5px solid var(--line-strong); }
+.chip[aria-pressed="true"] { background: var(--pc-wash); border-color: var(--pc); color: var(--pc-ink); }
+.note:empty { display: none; }
+button:focus-visible, .sw:focus-visible { outline: 2px solid var(--pc); outline-offset: 2px; }
+.circuit svg { display: block; margin-inline: auto; max-width: 100%; height: auto; min-width: 300px; }
+.w { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.w0 { stroke: var(--ink-faint); }
+.w1 { stroke: var(--pc); stroke-width: 4; }
+.wx { stroke: var(--line-strong); }
+.g-body { fill: var(--panel); stroke: var(--ink-dim); stroke-width: 2.2; stroke-linejoin: round; }
+.g-line { fill: none; stroke: var(--ink-dim); stroke-width: 2.2; stroke-linecap: round; }
+.g-mystery { stroke-dasharray: 5 4; }
+.g-q { font: 700 20px var(--mono); fill: var(--ink-dim); text-anchor: middle; }
+.g-label { font: 600 11px var(--mono); fill: var(--ink-faint); text-anchor: middle; letter-spacing: 0.04em; }
+.badge circle { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1.5; }
+.badge text { font: 600 11px var(--mono); fill: var(--ink); text-anchor: middle; }
+.sw rect { fill: var(--panel); stroke: var(--line-strong); stroke-width: 1.8; }
+.sw.on rect { fill: var(--pc-wash); stroke: var(--pc); }
+.sw.toggle { cursor: pointer; }
+.sw.toggle:hover rect { stroke: var(--ink-dim); }
+.sw-l { font: 700 15px var(--mono); fill: var(--ink); }
+.sw-v { font: 600 15px var(--mono); fill: var(--ink-dim); }
+.sw.on .sw-v { fill: var(--pc-ink); }
+.lamp { fill: var(--panel); stroke: var(--line-strong); stroke-width: 2; }
+.lamp.on { fill: var(--pc); stroke: var(--pc); }
+.lamp-t { font: 700 15px var(--mono); fill: var(--ink-dim); text-anchor: middle; }
+.lamp.on + .lamp-t { fill: #1B1500; }
+.q-l { font: 600 11px var(--mono); fill: var(--ink-faint); text-anchor: middle; }
+.extra[hidden] { display: none; }
+.tt-wrap { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: auto; max-width: 100%; }
+table.tt { border-collapse: separate; border-spacing: 0; width: 100%; font-family: var(--mono); font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.tt th, .tt td { padding: 6px 10px; text-align: center; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); min-width: 3rem; }
+.tt th:last-child, .tt td:last-child { border-right: 0; }
+.tt tbody tr:last-child td { border-bottom: 0; }
+.tt th { background: var(--panel-2); font-weight: 600; color: var(--ink-dim); font-size: 0.82rem; }
+.tt th.q, .tt td.q { border-left: 2px solid var(--line-strong); }
+.tt td.hi { color: var(--pc-ink); background: var(--pc-wash); font-weight: 600; }
+.cell { width: 2.6rem; height: 2rem; font: 600 1rem var(--mono); border-radius: 6px; cursor: pointer; color: var(--ink); background: var(--panel-2); border: 1.5px solid var(--line-strong); }
+.cell.set { background: var(--pc-wash); border-color: var(--pc); color: var(--pc-ink); }
+.cell.ok { background: var(--ok-wash); border-color: var(--ok); color: var(--ok); }
+.cell.bad { background: var(--bad-wash); border-color: var(--bad); color: var(--bad); }
+.cell small { display: block; font: 400 0.6rem var(--sans); line-height: 1; }
+td.wrongrow .cell { height: 2.6rem; }
+.opts { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: 8px; }
+.opts.wide { grid-template-columns: minmax(0, 1fr); }
+.opt { display: flex; align-items: center; gap: 10px; text-align: left; font: 500 0.95rem var(--mono); padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--line-strong); background: var(--panel-2); color: var(--ink); cursor: pointer; overflow-wrap: anywhere; }
+.opt kbd { margin-left: 0; flex: none; }
+.opt.ok { border-color: var(--ok); background: var(--ok-wash); }
+.opt.bad { border-color: var(--bad); background: var(--bad-wash); }
+.fb.ok { color: var(--ok); }
+.fb.bad { color: var(--bad); }
+
+/* Buttons, kbd hints and the hidden attribute: all emitted by the tool's JS
+   (class="tf" ×2, kbd ×8, opt ×22), so they stay as CSS rather than forcing a
+   rewrite of 29 template strings in a tool already used in lessons. */
+button.tf {
+  font: 600 0.92rem var(--sans); padding: 10px 20px; border-radius: 8px; cursor: pointer;
+  min-width: 6.5rem; background: var(--panel-2); color: var(--ink);
+  border: 1.5px solid var(--line-strong); font-family: var(--mono); font-size: 1.1rem;
+}
+button.tf:active, .opt:active { transform: translateY(1px); }
+kbd {
+  font-family: var(--mono); font-size: 0.7rem; margin-left: 8px; padding: 0 5px;
+  border: 1px solid var(--line-strong); border-radius: 4px; color: var(--ink-faint);
+}
+[hidden] { display: none !important; }
+
+/* Also JS-emitted (class="primary" ×2, class="actions", class="answer-row"),
+   so these must exist as CSS or the generated Check button renders unstyled. */
+button.primary {
+  font: 600 0.92rem var(--sans); padding: 10px 20px; border-radius: 8px; cursor: pointer;
+  background: var(--pc); color: #1B1500; border: 1.5px solid var(--pc);
+}
+button.primary:active { transform: translateY(1px); }
+button.primary:disabled { opacity: 0.55; cursor: default; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.answer-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* #fb has its className assigned wholesale by the tool's JS
+   ($('fb').className = 'fb ' + (ok ? 'ok' : 'bad')), which erases any utility
+   classes on the element. Its base styling must therefore live here, not in
+   the markup. Same rule applies to any element the JS reassigns. */
+.fb { margin: 14px 0 0; min-height: 1.4em; font-weight: 600; }

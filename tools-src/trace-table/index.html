@@ -1,0 +1,1232 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Trace Table — program tracing drills</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="/apple-touch-icon.png"><meta name="theme-color" content="#09090b"><meta name="description" content="Practise tracing programs by hand — step through loops and conditionals a line at a time and fill in the trace table. Runs entirely in the browser.">
+<!--TAILWIND-->
+</head>
+<body class="m-0 bg-bg text-ink font-sans text-base leading-[1.45] px-4 pt-[72px] pb-14 antialiased">
+<a class="fixed top-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-bg border-b border-line font-mono text-[0.8rem] no-underline text-ink-dim hover:text-ink z-50" href="/">
+  <span><span class="text-pc">~/</span>wt</span>
+  <span>&larr; back to site</span>
+</a>
+
+<div class="w-full max-w-wrap mx-auto flex flex-col gap-4">
+  <header>
+    <h1 class="m-0 mb-1 text-[1.7rem] font-bold tracking-[-0.015em] [text-wrap:balance]">Trace Table</h1>
+    <p class="m-0 text-ink-dim text-[0.95rem] max-w-[60ch]">Follow the program one line at a time and fill in what changes, the way you would in the exam.</p>
+  </header>
+
+  <div class="flex flex-wrap gap-y-2 gap-x-7 items-end [&_.n]:font-mono [&_.n]:text-[1.2rem] [&_.n]:font-semibold [&_.n]:leading-[1.1] [&_.n]:tabular-nums [&_.l]:text-[0.72rem] [&_.l]:text-ink-faint [&_.l]:tracking-[0.04em] [&_.l]:uppercase [&_.l]:mt-0.5" id="stats">
+    <div><div class="n" id="statStreak">0</div><div class="l">streak</div></div>
+    <div><div class="n" id="statBest">0</div><div class="l">best streak</div></div>
+    <div><div class="n" id="statProg">0</div><div class="l">programs</div></div>
+    <div><div class="n" id="statAcc">&mdash;</div><div class="l">accuracy</div></div>
+    <div id="livesStat" hidden><div class="inline-flex gap-1.5 h-[1.32rem] items-center" id="lives" aria-label="Lives left"></div><div class="l">lives</div></div>
+  </div>
+
+  <details class="controls group bg-panel border border-line rounded-xl shadow-panel min-w-0" id="settingsBox">
+    <summary class="list-none cursor-pointer flex items-center gap-3 px-[18px] py-3 rounded-xl max-[420px]:px-3.5 group-open:border-b group-open:border-line group-open:rounded-b-none">
+      <span class="text-[0.72rem] tracking-[0.06em] uppercase text-ink-faint font-semibold">Settings</span>
+      <span class="flex-1 min-w-0 text-[0.92rem] text-ink-dim [overflow-wrap:anywhere] [&_b]:text-ink [&_b]:font-semibold" id="sumText"></span>
+      <span class="flex-none w-2 h-2 mr-1 border-r-2 border-b-2 border-ink-faint rotate-45 transition-transform duration-150 group-open:-rotate-[135deg]" aria-hidden="true"></span>
+    </summary>
+    <div class="flex flex-col gap-2.5 px-[18px] pt-3.5 pb-4 max-[420px]:px-3.5">
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="text-[0.78rem] text-ink-dim min-w-[6rem] tracking-[0.04em] uppercase">Level</span>
+      <div class="inline-flex flex-wrap flex-1 gap-0.5 p-[3px] bg-panel-2 border border-line rounded-[9px] [&>button]:flex-1 [&>button]:min-w-[72px] [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-ink-dim [&>button]:font-medium [&>button]:text-[0.85rem] [&>button]:px-2.5 [&>button]:py-[7px] [&>button]:rounded-md [&>button]:cursor-pointer [&>button]:whitespace-nowrap [&>button]:max-[420px]:min-w-[60px] [&>button[aria-pressed=true]]:bg-panel [&>button[aria-pressed=true]]:text-ink [&>button[aria-pressed=true]]:shadow-seg" id="segLevel">
+        <button type="button" data-val="easy">Easy</button>
+        <button type="button" data-val="medium">Medium</button>
+        <button type="button" data-val="hard">Hard</button>
+        <button type="button" data-val="mixed">Mixed</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="text-[0.78rem] text-ink-dim min-w-[6rem] tracking-[0.04em] uppercase">Mode</span>
+      <div class="inline-flex flex-wrap flex-1 gap-0.5 p-[3px] bg-panel-2 border border-line rounded-[9px] [&>button]:flex-1 [&>button]:min-w-[72px] [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-ink-dim [&>button]:font-medium [&>button]:text-[0.85rem] [&>button]:px-2.5 [&>button]:py-[7px] [&>button]:rounded-md [&>button]:cursor-pointer [&>button]:whitespace-nowrap [&>button]:max-[420px]:min-w-[60px] [&>button[aria-pressed=true]]:bg-panel [&>button[aria-pressed=true]]:text-ink [&>button[aria-pressed=true]]:shadow-seg" id="segMode">
+        <button type="button" data-val="practice">Practice</button>
+        <button type="button" data-val="lives">Three lives</button>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 flex-wrap">
+      <span class="text-[0.78rem] text-ink-dim min-w-[6rem] tracking-[0.04em] uppercase">Categories</span>
+      <div class="flex flex-wrap items-center gap-1.5 flex-[1_1_15rem] min-w-0" id="cats">
+        <span id="catChips" style="display: contents"></span>
+        <button type="button" class="font-medium text-[0.8rem] text-kw bg-transparent border-0 px-1.5 py-1 cursor-pointer underline" id="catsAll" hidden>Select all</button>
+      </div>
+    </div>
+    <p class="m-0 text-[0.8rem] text-ink-faint" id="topicNote"></p>
+    <p class="cat-note m-0 min-h-[1.2em] text-[0.8rem] text-bad" id="catNote" role="status"></p>
+    </div>
+  </details>
+
+  <main class="grid grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] [grid-template-areas:'code_table'_'ask_table'] grid-rows-[auto_1fr] gap-4 items-start max-[820px]:grid-cols-[minmax(0,1fr)] max-[820px]:[grid-template-areas:'code'_'ask'_'table'] max-[820px]:grid-rows-none">
+    <section class="bg-panel border border-line rounded-xl shadow-panel min-w-0 [grid-area:code] p-0 overflow-hidden" aria-label="Program">
+      <div class="px-[18px] pt-3.5 pb-3 border-b border-line flex flex-col gap-1.5">
+        <span class="text-[0.72rem] tracking-[0.06em] uppercase text-ink-faint font-semibold">Program</span>
+        <h2 class="text-[1.05rem] font-semibold m-0" id="progTitle">&nbsp;</h2>
+        <div class="flex flex-wrap gap-1.5" id="progChips"></div>
+      </div>
+      <div class="py-2 font-mono text-[0.95rem] overflow-x-auto max-[420px]:text-[0.86rem]" id="code" role="list"></div>
+    </section>
+
+    <section class="bg-panel border border-line rounded-xl shadow-panel min-w-0 p-[18px] max-[420px]:p-3.5 [grid-area:ask]" aria-live="polite">
+      <div id="askMain">
+        <div class="flex items-center justify-between gap-3 mb-2"><span class="text-[0.72rem] tracking-[0.06em] uppercase text-ink-faint font-semibold" id="qMeta"></span></div>
+        <div class="h-1 rounded-sm bg-panel-2 border border-line overflow-hidden mb-3.5"><i class="block h-full w-0 bg-pc transition-[width] duration-[250ms] motion-reduce:transition-none" id="meterBar"></i></div>
+        <p class="text-[1.15rem] font-medium m-0 mb-3.5 [text-wrap:balance] max-[420px]:text-[1.05rem] [&_code]:font-mono [&_code]:text-[0.95em] [&_code]:bg-panel-2 [&_code]:border [&_code]:border-line [&_code]:rounded-[5px] [&_code]:px-1.5 [&_code]:py-px" id="qText"></p>
+        <div class="flex gap-2.5 flex-wrap items-center" id="numRow">
+          <input type="text" id="ans" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Your answer" placeholder="?"
+                 class="w-[11rem] max-w-full font-mono font-semibold text-[1.3rem] text-center text-ink bg-panel border-[1.5px] border-line-strong rounded-lg px-2.5 py-2">
+          <button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default bg-pc text-[#1B1500] border-pc active:translate-y-px" id="checkBtn">Check</button>
+        </div>
+        <div class="flex gap-2.5 flex-wrap items-center" id="tfRow" hidden>
+          <button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default min-w-[7.5rem] bg-panel-2 text-ink border-line-strong font-mono text-base active:translate-y-px [&_kbd]:font-mono [&_kbd]:text-[0.7rem] [&_kbd]:ml-2 [&_kbd]:px-[5px] [&_kbd]:border [&_kbd]:border-line-strong [&_kbd]:rounded [&_kbd]:text-ink-faint" id="tBtn">True<kbd>T</kbd></button>
+          <button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default min-w-[7.5rem] bg-panel-2 text-ink border-line-strong font-mono text-base active:translate-y-px [&_kbd]:font-mono [&_kbd]:text-[0.7rem] [&_kbd]:ml-2 [&_kbd]:px-[5px] [&_kbd]:border [&_kbd]:border-line-strong [&_kbd]:rounded [&_kbd]:text-ink-faint" id="fBtn">False<kbd>F</kbd></button>
+        </div>
+        <p class="fb" id="fb"></p>
+        <p class="mt-1 mb-0 min-h-[1.4em] font-mono text-[0.88rem] text-ink-dim [overflow-wrap:anywhere]" id="explain"></p>
+        <div class="flex gap-2.5 flex-wrap mt-3">
+          <button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default bg-transparent text-ink-dim border-line-strong" id="revealBtn">Show me</button>
+          <button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default bg-pc text-[#1B1500] border-pc active:translate-y-px" id="contBtn" hidden>Continue</button>
+        </div>
+        <p class="mt-3 mb-0 text-[0.76rem] text-ink-faint">Enter checks and continues. T and F answer true or false.</p>
+      </div>
+
+      <div id="askDone" hidden>
+        <h2 class="m-0 mb-1.5 text-[1.25rem]" id="doneTitle"></h2>
+        <p class="m-0 mb-1.5 text-ink-dim" id="doneText"></p>
+        <p class="font-mono text-ink m-0 mb-1.5" id="doneOut"></p>
+        <div class="flex gap-2.5 flex-wrap mt-3.5"><button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default bg-pc text-[#1B1500] border-pc active:translate-y-px" id="nextBtn">Next program</button></div>
+      </div>
+
+      <div id="askOver" hidden>
+        <h2 class="m-0 mb-1.5 text-[1.25rem]">Out of lives</h2>
+        <p class="m-0 mb-1.5 text-ink-dim" id="overText"></p>
+        <div class="flex gap-2.5 flex-wrap mt-3.5"><button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-50 disabled:cursor-default bg-pc text-[#1B1500] border-pc active:translate-y-px" id="againBtn">Play again</button></div>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-line rounded-xl shadow-panel min-w-0 p-[18px] max-[420px]:p-3.5 [grid-area:table]" aria-label="Trace table">
+      <h2 class="m-0 mb-1 text-[1.05rem]">Trace table</h2>
+      <p class="m-0 mb-3 text-[0.82rem] text-ink-dim">Only the value that changes goes in each row. The highlighted cell is where your answer goes.</p>
+      <div class="tt-wrap" id="ttWrap"><table class="tt" id="tt"></table></div>
+    </section>
+  </main>
+
+  <footer class="text-[0.76rem] text-ink-faint">Best scores are saved on this device. Pseudocode uses exam-style command words (SET, SEND ... TO DISPLAY, FOR ... DO).</footer>
+</div>
+
+<script>
+// ==ENGINE-START==
+var KEYWORDS = { AND: 1, OR: 1, NOT: 1, MOD: 1, DIV: 1, True: 1, False: 1, LENGTH: 1 };
+
+function rnd(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function sample(n, lo, hi) {
+  var out = [];
+  while (out.length < n) {
+    var v = rnd(lo, hi);
+    if (out.indexOf(v) < 0) out.push(v);
+  }
+  return out;
+}
+
+function tokenize(src) {
+  var out = [], i = 0, m;
+  var re = /(\d+(?:\.\d+)?)|("[^"]*")|([A-Za-z_][A-Za-z_0-9]*)|(<=|>=|!=|[-+*\/()=<>\[\],])/y;
+  while (i < src.length) {
+    if (/\s/.test(src[i])) { i++; continue; }
+    re.lastIndex = i;
+    m = re.exec(src);
+    if (!m) throw new Error('Bad token in: ' + src);
+    if (m[1] !== undefined) out.push({ t: 'num', v: parseFloat(m[1]) });
+    else if (m[2] !== undefined) out.push({ t: 'str', v: m[2].slice(1, -1) });
+    else if (m[3] !== undefined) out.push({ t: 'id', v: m[3] });
+    else out.push({ t: 'op', v: m[4] });
+    i = re.lastIndex;
+  }
+  return out;
+}
+
+var exprCache = {};
+var CMP = {
+  '=': function (a, b) { return a === b; },
+  '!=': function (a, b) { return a !== b; },
+  '<': function (a, b) { return a < b; },
+  '>': function (a, b) { return a > b; },
+  '<=': function (a, b) { return a <= b; },
+  '>=': function (a, b) { return a >= b; }
+};
+
+function compile(src) {
+  if (exprCache[src]) return exprCache[src];
+  var toks = tokenize(src), p = 0;
+  function isOp(v) { var t = toks[p]; return !!t && t.t === 'op' && t.v === v; }
+  function isId(v) { var t = toks[p]; return !!t && t.t === 'id' && t.v === v; }
+  function expect(v) { if (!isOp(v)) throw new Error('Expected ' + v + ' in: ' + src); p++; }
+  function join(l, r, f) { return function (env) { return f(l(env), r(env)); }; }
+  function konst(v) { return function () { return v; }; }
+
+  function pOr() {
+    var l = pAnd();
+    while (isId('OR')) { p++; l = join(l, pAnd(), function (a, b) { return a || b; }); }
+    return l;
+  }
+  function pAnd() {
+    var l = pNot();
+    while (isId('AND')) { p++; l = join(l, pNot(), function (a, b) { return a && b; }); }
+    return l;
+  }
+  function pNot() {
+    if (isId('NOT')) { p++; var x = pNot(); return function (env) { return !x(env); }; }
+    return pCmp();
+  }
+  function pCmp() {
+    var l = pAdd();
+    while (toks[p] && toks[p].t === 'op' && CMP[toks[p].v]) {
+      var f = CMP[toks[p].v];
+      p++;
+      l = join(l, pAdd(), f);
+    }
+    return l;
+  }
+  function pAdd() {
+    var l = pMul();
+    while (isOp('+') || isOp('-')) {
+      var plus = isOp('+');
+      p++;
+      l = join(l, pMul(), plus ? function (a, b) { return a + b; } : function (a, b) { return a - b; });
+    }
+    return l;
+  }
+  function pMul() {
+    var l = pUn();
+    for (;;) {
+      if (isOp('*')) { p++; l = join(l, pUn(), function (a, b) { return a * b; }); }
+      else if (isOp('/')) { p++; l = join(l, pUn(), function (a, b) { return a / b; }); }
+      else if (isId('MOD')) { p++; l = join(l, pUn(), function (a, b) { return a % b; }); }
+      else if (isId('DIV')) { p++; l = join(l, pUn(), function (a, b) { return Math.floor(a / b); }); }
+      else break;
+    }
+    return l;
+  }
+  function pUn() {
+    if (isOp('-')) { p++; var x = pUn(); return function (env) { return -x(env); }; }
+    return pPrim();
+  }
+  function pPrim() {
+    var t = toks[p++];
+    if (!t) throw new Error('Unexpected end of: ' + src);
+    if (t.t === 'num' || t.t === 'str') return konst(t.v);
+    if (t.t === 'id') {
+      if (t.v === 'True') return konst(true);
+      if (t.v === 'False') return konst(false);
+      var name = t.v;
+      if (name === 'LENGTH' && isOp('(')) {
+        p++;
+        var arg = pOr();
+        expect(')');
+        return function (env) { return arg(env).length; };
+      }
+      if (isOp('[')) {
+        p++;
+        var idx = pOr();
+        expect(']');
+        return function (env) { return env[name][idx(env)]; };
+      }
+      return function (env) {
+        if (!(name in env)) throw new Error('Unset variable ' + name);
+        return env[name];
+      };
+    }
+    if (t.v === '(') { var e = pOr(); expect(')'); return e; }
+    if (t.v === '[') {
+      var items = [];
+      if (!isOp(']')) {
+        items.push(pOr());
+        while (isOp(',')) { p++; items.push(pOr()); }
+      }
+      expect(']');
+      return function (env) { return items.map(function (f) { return f(env); }); };
+    }
+    throw new Error('Unexpected ' + t.v + ' in: ' + src);
+  }
+
+  var f = pOr();
+  if (p < toks.length) throw new Error('Trailing tokens in: ' + src);
+  exprCache[src] = f;
+  return f;
+}
+
+function fmtVal(v) {
+  if (Array.isArray(v)) return '[' + v.map(fmtVal).join(', ') + ']';
+  if (v === true) return 'True';
+  if (v === false) return 'False';
+  return String(v);
+}
+
+// Statement builders
+function S(v, e) { return { t: 'set', v: v, e: String(e) }; }
+function O(e) { return { t: 'out', e: String(e) }; }
+function IF(c, a, b) { return { t: 'if', c: c, a: a, b: b || null }; }
+function FOR(v, from, to, body) { return { t: 'for', v: v, from: String(from), to: String(to), body: body }; }
+function EACH(v, list, body) { return { t: 'each', v: v, list: list, body: body }; }
+function WHILE(c, body) { return { t: 'while', c: c, body: body }; }
+function REP(n, body) { return { t: 'rep', n: String(n), body: body }; }
+function UNTIL(body, c) { return { t: 'until', c: c, body: body }; }
+function lit(arr) { return '[' + arr.join(', ') + ']'; }
+
+// Turn the statement tree into printed lines and remember each statement's line index
+function layout(body) {
+  var lines = [];
+  function add(ind, text) { lines.push({ ind: ind, text: text }); }
+  function walk(nodes, ind) {
+    nodes.forEach(function (n) {
+      n.line = lines.length;
+      if (n.t === 'set') add(ind, 'SET ' + n.v + ' TO ' + n.e);
+      else if (n.t === 'out') add(ind, 'SEND ' + n.e + ' TO DISPLAY');
+      else if (n.t === 'if') {
+        add(ind, 'IF ' + n.c + ' THEN');
+        walk(n.a, ind + 1);
+        if (n.b) { add(ind, 'ELSE'); walk(n.b, ind + 1); }
+        add(ind, 'END IF');
+      } else if (n.t === 'for') {
+        add(ind, 'FOR ' + n.v + ' FROM ' + n.from + ' TO ' + n.to + ' DO');
+        walk(n.body, ind + 1);
+        add(ind, 'END FOR');
+      } else if (n.t === 'each') {
+        add(ind, 'FOR EACH ' + n.v + ' FROM ' + n.list + ' DO');
+        walk(n.body, ind + 1);
+        add(ind, 'END FOR');
+      } else if (n.t === 'while') {
+        add(ind, 'WHILE ' + n.c + ' DO');
+        walk(n.body, ind + 1);
+        add(ind, 'END WHILE');
+      } else if (n.t === 'rep') {
+        add(ind, 'REPEAT ' + n.n + ' TIMES');
+        walk(n.body, ind + 1);
+        add(ind, 'END REPEAT');
+      } else if (n.t === 'until') {
+        add(ind, 'REPEAT');
+        walk(n.body, ind + 1);
+        n.uline = lines.length;
+        add(ind, 'UNTIL ' + n.c);
+      }
+    });
+  }
+  walk(body, 0);
+  return lines;
+}
+
+// Run the program and record every step a student is asked about
+function simulate(body) {
+  var env = {}, steps = [], guard = 0;
+  function push(s) {
+    steps.push(s);
+    if (steps.length > 60) throw new Error('Program too long');
+  }
+  function snap() { var c = {}; for (var k in env) c[k] = env[k]; return c; }
+  function exec(nodes) {
+    nodes.forEach(function (n) {
+      var before, v, c;
+      if (n.t === 'set') {
+        before = snap();
+        v = compile(n.e)(env);
+        env[n.v] = v;
+        push({ line: n.line, kind: Array.isArray(v) ? 'given' : 'assign', via: 'set', name: n.v, value: v, expr: n.e, env: before });
+      } else if (n.t === 'out') {
+        before = snap();
+        v = compile(n.e)(env);
+        push({ line: n.line, kind: 'out', value: v, expr: n.e, env: before });
+      } else if (n.t === 'if') {
+        before = snap();
+        c = !!compile(n.c)(env);
+        push({ line: n.line, kind: 'cond', value: c, expr: n.c, env: before });
+        exec(c ? n.a : (n.b || []));
+      } else if (n.t === 'for') {
+        var from = compile(n.from)(env), to = compile(n.to)(env);
+        for (var i = from; i <= to; i++) {
+          env[n.v] = i;
+          push({ line: n.line, kind: 'assign', via: 'for', name: n.v, value: i, env: snap() });
+          exec(n.body);
+        }
+      } else if (n.t === 'each') {
+        var list = compile(n.list)(env), unit = 'item';
+        if (typeof list === 'string') { list = Array.from(list); unit = 'letter'; }
+        list.forEach(function (x) {
+          env[n.v] = x;
+          push({ line: n.line, kind: 'assign', via: 'each', unit: unit, name: n.v, value: x, env: snap() });
+          exec(n.body);
+        });
+      } else if (n.t === 'rep') {
+        var times = compile(n.n)(env);
+        for (var r = 0; r < times; r++) exec(n.body);
+      } else if (n.t === 'until') {
+        for (;;) {
+          exec(n.body);
+          before = snap();
+          c = !!compile(n.c)(env);
+          push({ line: n.uline, kind: 'cond', value: c, expr: n.c, env: before });
+          if (c) break;
+          if (++guard > 200) throw new Error('Runaway loop');
+        }
+      } else if (n.t === 'while') {
+        for (;;) {
+          before = snap();
+          c = !!compile(n.c)(env);
+          push({ line: n.line, kind: 'cond', value: c, expr: n.c, env: before });
+          if (!c) break;
+          exec(n.body);
+          if (++guard > 200) throw new Error('Runaway loop');
+        }
+      }
+    });
+  }
+  exec(body);
+  return steps;
+}
+
+// Programs. Each generator picks fresh numbers every time.
+var GENERATORS = [
+  {
+    id: 'swap', cats: ['sequence'], level: 'easy', title: 'Swapping two values', concept: ['sequence', 'assignment'],
+    make: function () {
+      var a = rnd(2, 9), b = rnd(10, 19);
+      return [S('a', a), S('b', b), S('temp', 'a'), S('a', 'b'), S('b', 'temp'), O('a'), O('b')];
+    }
+  },
+  {
+    id: 'chain', cats: ['sequence'], level: 'easy', title: 'Working through assignments', concept: ['sequence', 'arithmetic'],
+    make: function () {
+      var x = rnd(2, 9), k = rnd(2, 5), m = rnd(1, 3);
+      return [S('x', x), S('y', 'x * ' + k), S('x', 'y - ' + m), S('z', 'x + y'), O('z')];
+    }
+  },
+  {
+    id: 'grade', cats: ['selection'], level: 'easy', title: 'Adding a bonus, then a decision', concept: ['selection', 'IF / ELSE'],
+    make: function () {
+      var score = rnd(30, 52), bonus = rnd(3, 12), pass = pick([40, 50, 55]);
+      return [
+        S('score', score), S('bonus', bonus), S('score', 'score + bonus'),
+        IF('score >= ' + pass, [S('result', '"Pass"')], [S('result', '"Fail"')]),
+        O('result')
+      ];
+    }
+  },
+  {
+    id: 'total', cats: ['iteration', 'totalling'], level: 'medium', title: 'Running total', concept: ['iteration', 'totalling'],
+    make: function () {
+      var n = rnd(3, 5), k = pick([1, 2, 3]);
+      return [S('total', 0), FOR('i', 1, n, [S('total', k === 1 ? 'total + i' : 'total + i * ' + k)]), O('total')];
+    }
+  },
+  {
+    id: 'count', cats: ['iteration', 'selection', 'moddiv', 'totalling'], level: 'medium', title: 'Counting multiples', concept: ['iteration', 'selection', 'MOD'],
+    make: function () {
+      var lo = rnd(1, 4), hi = lo + rnd(4, 5), d = pick([2, 3]);
+      return [S('count', 0), FOR('i', lo, hi, [IF('i MOD ' + d + ' = 0', [S('count', 'count + 1')])]), O('count')];
+    }
+  },
+  {
+    id: 'max', cats: ['iteration', 'selection', 'lists'], level: 'medium', title: 'Finding the largest', concept: ['lists', 'iteration', 'selection'],
+    make: function () {
+      var nums = sample(rnd(4, 5), 1, 20);
+      return [
+        S('nums', lit(nums)), S('biggest', 'nums[0]'),
+        EACH('item', 'nums', [IF('item > biggest', [S('biggest', 'item')])]),
+        O('biggest')
+      ];
+    }
+  },
+  {
+    id: 'search', cats: ['iteration', 'selection', 'lists', 'flags'], level: 'medium', title: 'Linear search', concept: ['lists', 'iteration', 'flags'],
+    make: function () {
+      var nums = sample(rnd(4, 5), 1, 20), target;
+      if (Math.random() < 0.5) target = pick(nums);
+      else { do { target = rnd(1, 20); } while (nums.indexOf(target) >= 0); }
+      return [
+        S('nums', lit(nums)), S('target', target), S('found', 'False'),
+        EACH('item', 'nums', [IF('item = target', [S('found', 'True')])]),
+        O('found')
+      ];
+    }
+  },
+  {
+    id: 'halve', cats: ['while', 'moddiv', 'totalling'], level: 'hard', title: 'Halving until small', concept: ['WHILE', 'DIV', 'counting'],
+    make: function () {
+      var n = pick([20, 24, 32, 40, 48, 50, 64]), lim = pick([3, 5, 8]);
+      return [
+        S('n', n), S('steps', 0),
+        WHILE('n > ' + lim, [S('n', 'n DIV 2'), S('steps', 'steps + 1')]),
+        O('steps')
+      ];
+    }
+  },
+  {
+    id: 'digits', cats: ['while', 'moddiv', 'totalling'], level: 'hard', title: 'Adding up the digits', concept: ['WHILE', 'MOD', 'DIV'],
+    make: function () {
+      var n = rnd(100, 999);
+      return [
+        S('n', n), S('total', 0),
+        WHILE('n > 0', [S('total', 'total + (n MOD 10)'), S('n', 'n DIV 10')]),
+        O('total')
+      ];
+    }
+  },
+  {
+    id: 'fizz', cats: ['iteration', 'selection', 'moddiv'], level: 'hard', title: 'Words and numbers', concept: ['iteration', 'selection', 'output'],
+    make: function () {
+      var hi = pick([5, 6]), d = pick([2, 3]), word = pick(['Buzz', 'Fizz', 'Ping']);
+      return [FOR('i', 1, hi, [IF('i MOD ' + d + ' = 0', [O('"' + word + '"')], [O('i')])])];
+    }
+  },
+  {
+    id: 'both', cats: ['while', 'logic', 'totalling'], level: 'hard', title: 'Two conditions at once', concept: ['WHILE', 'AND', 'iteration'],
+    make: function () {
+      var limit = rnd(7, 14);
+      return [
+        S('total', 0), S('i', 0),
+        WHILE('total < ' + limit + ' AND i < 5', [S('i', 'i + 1'), S('total', 'total + i * 2')]),
+        O('i')
+      ];
+    }
+  },
+  {
+    id: 'taxi', cats: ['sequence', 'selection'], level: 'easy', title: 'Taxi fare', concept: ['sequence', 'selection'],
+    make: function () {
+      var d = rnd(4, 16);
+      return [S('distance', d), S('fare', 3), S('fare', 'fare + distance * 2'), IF('distance > 10', [S('fare', 'fare + 5')]), O('fare')];
+    }
+  },
+  {
+    id: 'discount', cats: ['sequence', 'selection', 'moddiv'], level: 'easy', title: 'Shop discount', concept: ['selection', 'DIV'],
+    make: function () {
+      var price = pick([40, 45, 55, 60, 80, 90]);
+      return [
+        S('price', price), S('discount', 10),
+        IF('price >= 50', [S('discount', 20)]),
+        S('pay', 'price - (price * discount DIV 100)'), O('pay')
+      ];
+    }
+  },
+  {
+    id: 'lastdigit', cats: ['selection', 'moddiv'], level: 'easy', title: 'Odd or even by last digit', concept: ['selection', 'MOD'],
+    make: function () {
+      var n = rnd(10, 99);
+      return [
+        S('n', n), S('last', 'n MOD 10'),
+        IF('last MOD 2 = 0', [S('kind', '"even"')], [S('kind', '"odd"')]),
+        O('kind')
+      ];
+    }
+  },
+  {
+    id: 'pocket', cats: ['sequence', 'moddiv'], level: 'easy', title: 'Pocket money', concept: ['sequence', 'DIV'],
+    make: function () {
+      var a = rnd(10, 20), b = rnd(5, 15), c = rnd(6, 14);
+      return [S('money', a), S('money', 'money + ' + b), S('spent', c), S('money', 'money - spent'), S('half', 'money DIV 2'), O('half')];
+    }
+  },
+  {
+    id: 'gradechain', cats: ['selection'], level: 'easy', title: 'Grade boundaries', concept: ['selection', 'nested IF'],
+    make: function () {
+      var score = rnd(20, 95);
+      return [
+        S('score', score),
+        IF('score >= 70', [S('grade', '"A"')], [IF('score >= 50', [S('grade', '"B"')], [S('grade', '"C"')])]),
+        O('grade')
+      ];
+    }
+  },
+  {
+    id: 'evenbig', cats: ['selection', 'logic', 'moddiv'], level: 'easy', title: 'Big and even', concept: ['selection', 'AND'],
+    make: function () {
+      var n = rnd(5, 30);
+      return [S('n', n), IF('n > 10 AND n MOD 2 = 0', [S('label', '"big even"')], [S('label', '"other"')]), O('label')];
+    }
+  },
+  {
+    id: 'oddsum', cats: ['iteration', 'selection', 'moddiv', 'totalling'], level: 'medium', title: 'Sum of the odd numbers', concept: ['iteration', 'selection', 'MOD'],
+    make: function () {
+      var n = rnd(5, 7);
+      return [S('total', 0), FOR('i', 1, n, [IF('i MOD 2 = 1', [S('total', 'total + i')])]), O('total')];
+    }
+  },
+  {
+    id: 'timestable', cats: ['iteration'], level: 'medium', title: 'Times table', concept: ['iteration', 'output'],
+    make: function () {
+      var k = rnd(3, 9);
+      return [S('n', k), FOR('i', 1, 4, [S('product', 'n * i'), O('product')])];
+    }
+  },
+  {
+    id: 'average', cats: ['lists', 'iteration', 'totalling', 'moddiv'], level: 'medium', title: 'Average of a list', concept: ['lists', 'iteration', 'LENGTH'],
+    make: function () {
+      var nums = sample(4, 2, 12);
+      return [
+        S('nums', lit(nums)), S('total', 0),
+        EACH('item', 'nums', [S('total', 'total + item')]),
+        S('average', 'total DIV LENGTH(nums)'), O('average')
+      ];
+    }
+  },
+  {
+    id: 'above', cats: ['lists', 'iteration', 'selection', 'totalling'], level: 'medium', title: 'Counting above a limit', concept: ['lists', 'iteration', 'selection'],
+    make: function () {
+      var nums = sample(5, 1, 20), limit = rnd(6, 14);
+      return [
+        S('nums', lit(nums)), S('limit', limit), S('count', 0),
+        EACH('item', 'nums', [IF('item > limit', [S('count', 'count + 1')])]),
+        O('count')
+      ];
+    }
+  },
+  {
+    id: 'largestpos', cats: ['lists', 'iteration', 'selection'], level: 'medium', title: 'Largest value and where it is', concept: ['lists', 'indexing', 'selection'],
+    make: function () {
+      var nums = sample(4, 1, 30);
+      return [
+        S('nums', lit(nums)), S('biggest', 'nums[0]'), S('pos', 0),
+        FOR('i', 1, 3, [IF('nums[i] > biggest', [S('biggest', 'nums[i]'), S('pos', 'i')])]),
+        O('pos'), O('biggest')
+      ];
+    }
+  },
+  {
+    id: 'countdown', cats: ['repeat'], level: 'medium', title: 'Counting down', concept: ['REPEAT', 'output'],
+    make: function () {
+      var n0 = rnd(20, 40), k = rnd(2, 5);
+      return [S('n', n0), REP(4, [S('n', 'n - ' + k), O('n')])];
+    }
+  },
+  {
+    id: 'saving', cats: ['repeat'], level: 'medium', title: 'Growing savings', concept: ['REPEAT', 'arithmetic'],
+    make: function () {
+      var s0 = rnd(2, 9), t = rnd(3, 4);
+      return [S('saved', s0), REP(t, [S('saved', 'saved * 2 + 5'), O('saved')])];
+    }
+  },
+  {
+    id: 'until', cats: ['repeat', 'totalling'], level: 'medium', title: 'Doubling until big enough', concept: ['REPEAT UNTIL', 'counting'],
+    make: function () {
+      var start = pick([1, 2, 3]), limit = pick([20, 30, 50]);
+      return [S('n', start), S('count', 0), UNTIL([S('n', 'n * 2'), S('count', 'count + 1')], 'n > ' + limit), O('count')];
+    }
+  },
+  {
+    id: 'anyneg', cats: ['lists', 'iteration', 'selection', 'flags'], level: 'medium', title: 'Is anything negative?', concept: ['lists', 'flags'],
+    make: function () {
+      var nums = Math.random() < 0.5 ? sample(5, 1, 9) : sample(5, -6, 9);
+      return [
+        S('nums', lit(nums)), S('hasNegative', 'False'),
+        EACH('item', 'nums', [IF('item < 0', [S('hasNegative', 'True')])]),
+        O('hasNegative')
+      ];
+    }
+  },
+  {
+    id: 'alleven', cats: ['lists', 'iteration', 'selection', 'flags', 'moddiv'], level: 'medium', title: 'Are they all even?', concept: ['lists', 'flags', 'MOD'],
+    make: function () {
+      var nums = Math.random() < 0.5 ? sample(4, 1, 10).map(function (x) { return x * 2; }) : sample(4, 1, 20);
+      return [
+        S('nums', lit(nums)), S('allEven', 'True'),
+        EACH('item', 'nums', [IF('item MOD 2 != 0', [S('allEven', 'False')])]),
+        O('allEven')
+      ];
+    }
+  },
+  {
+    id: 'vowels', cats: ['strings', 'iteration', 'selection', 'logic', 'totalling'], level: 'medium', title: 'Counting vowels', concept: ['strings', 'OR', 'iteration'],
+    make: function () {
+      var word = pick(['data', 'loop', 'code', 'array', 'input', 'logic', 'stack', 'queue', 'byte']);
+      return [
+        S('word', '"' + word + '"'), S('count', 0),
+        EACH('letter', 'word', [IF('letter = "a" OR letter = "e" OR letter = "i" OR letter = "o" OR letter = "u"', [S('count', 'count + 1')])]),
+        O('count')
+      ];
+    }
+  },
+  {
+    id: 'reverse', cats: ['strings', 'iteration'], level: 'medium', title: 'Reversing a word', concept: ['strings', 'indexing', 'LENGTH'],
+    make: function () {
+      var word = pick(['loop', 'code', 'stack', 'array', 'logic']);
+      return [
+        S('word', '"' + word + '"'), S('rev', 'word[0]'),
+        FOR('i', 1, 'LENGTH(word) - 1', [S('rev', 'word[i] + rev')]),
+        O('rev')
+      ];
+    }
+  },
+  {
+    id: 'diffs', cats: ['lists', 'iteration'], level: 'medium', title: 'Gaps between neighbours', concept: ['lists', 'indexing'],
+    make: function () {
+      var nums = sample(4, 1, 30);
+      return [S('nums', lit(nums)), FOR('i', 0, 2, [S('diff', 'nums[i + 1] - nums[i]'), O('diff')])];
+    }
+  },
+  {
+    id: 'position', cats: ['lists', 'iteration', 'selection'], level: 'medium', title: 'Search and report the position', concept: ['lists', 'indexing', 'search'],
+    make: function () {
+      var nums = sample(4, 1, 20), target;
+      if (Math.random() < 0.6) target = pick(nums);
+      else { do { target = rnd(1, 20); } while (nums.indexOf(target) >= 0); }
+      return [
+        S('nums', lit(nums)), S('target', target), S('pos', -1),
+        FOR('i', 0, 3, [IF('nums[i] = target', [S('pos', 'i')])]),
+        O('pos')
+      ];
+    }
+  },
+  {
+    id: 'leap', cats: ['selection', 'logic', 'moddiv', 'flags'], level: 'hard', title: 'Leap year test', concept: ['selection', 'AND / OR', 'MOD'],
+    make: function () {
+      var year = pick([1900, 1996, 2000, 2012, 2023, 2024, 2100]);
+      return [
+        S('year', year), S('leap', 'False'),
+        IF('year MOD 4 = 0 AND (year MOD 100 != 0 OR year MOD 400 = 0)', [S('leap', 'True')]),
+        O('leap')
+      ];
+    }
+  },
+  {
+    id: 'grid', cats: ['iteration', 'nested', 'totalling'], level: 'hard', title: 'Totalling a grid', concept: ['nested loops', 'totalling'],
+    make: function () {
+      var a = rnd(2, 3), b = rnd(2, 3);
+      return [S('total', 0), FOR('i', 1, a, [FOR('j', 1, b, [S('total', 'total + i * j')])]), O('total')];
+    }
+  },
+  {
+    id: 'tablegrid', cats: ['iteration', 'nested'], level: 'hard', title: 'Multiplication grid', concept: ['nested loops', 'output'],
+    make: function () {
+      var b = pick([3, 4]);
+      return [FOR('i', 1, 2, [FOR('j', 1, b, [O('i * j')])])];
+    }
+  },
+  {
+    id: 'pairs', cats: ['iteration', 'nested', 'selection', 'totalling'], level: 'hard', title: 'Counting pairs that add up', concept: ['nested loops', 'selection'],
+    make: function () {
+      var target = rnd(3, 5);
+      return [S('count', 0), FOR('i', 1, 3, [FOR('j', 1, 2, [IF('i + j = ' + target, [S('count', 'count + 1')])])]), O('count')];
+    }
+  },
+  {
+    id: 'collatz', cats: ['while', 'selection', 'moddiv', 'totalling'], level: 'hard', title: 'Halve or triple', concept: ['WHILE', 'selection', 'DIV'],
+    make: function () {
+      var start = pick([4, 5, 8, 16]);
+      return [
+        S('n', start), S('steps', 0),
+        WHILE('n != 1', [IF('n MOD 2 = 0', [S('n', 'n DIV 2')], [S('n', 'n * 3 + 1')]), S('steps', 'steps + 1')]),
+        O('steps')
+      ];
+    }
+  },
+  {
+    id: 'prime', cats: ['flags', 'iteration', 'selection', 'moddiv'], level: 'hard', title: 'Is it prime?', concept: ['flags', 'iteration', 'MOD'],
+    make: function () {
+      var n = pick([9, 11, 12, 13, 15]);
+      return [
+        S('n', n), S('prime', 'True'),
+        FOR('d', 2, 'n DIV 2', [IF('n MOD d = 0', [S('prime', 'False')])]),
+        O('prime')
+      ];
+    }
+  },
+  {
+    id: 'binary', cats: ['while', 'moddiv'], level: 'hard', title: 'Binary digits, lowest first', concept: ['WHILE', 'MOD', 'DIV'],
+    make: function () {
+      var n = rnd(5, 15);
+      return [S('n', n), WHILE('n > 0', [S('bit', 'n MOD 2'), O('bit'), S('n', 'n DIV 2')])];
+    }
+  },
+  {
+    id: 'revdigits', cats: ['while', 'moddiv'], level: 'hard', title: 'Reversing the digits', concept: ['WHILE', 'MOD', 'DIV'],
+    make: function () {
+      var n = rnd(100, 999);
+      return [
+        S('n', n), S('rev', 0),
+        WHILE('n > 0', [S('rev', 'rev * 10 + (n MOD 10)'), S('n', 'n DIV 10')]),
+        O('rev')
+      ];
+    }
+  },
+  {
+    id: 'change', cats: ['while', 'totalling'], level: 'hard', title: 'Change in fives', concept: ['WHILE', 'counting'],
+    make: function () {
+      var amt = rnd(12, 29);
+      return [
+        S('amount', amt), S('coins', 0),
+        WHILE('amount >= 5', [S('amount', 'amount - 5'), S('coins', 'coins + 1')]),
+        O('coins'), O('amount')
+      ];
+    }
+  }
+];
+
+var CATEGORIES = [
+  { id: 'sequence', label: 'Sequence' },
+  { id: 'selection', label: 'Selection' },
+  { id: 'iteration', label: 'FOR loops' },
+  { id: 'while', label: 'WHILE loops' },
+  { id: 'lists', label: 'Lists' },
+  { id: 'flags', label: 'Flags' },
+  { id: 'moddiv', label: 'MOD / DIV' },
+  { id: 'totalling', label: 'Totals & counts' },
+  { id: 'logic', label: 'AND / OR' },
+  { id: 'repeat', label: 'REPEAT loops' },
+  { id: 'strings', label: 'Strings' },
+  { id: 'nested', label: 'Nested loops' }
+];
+
+// A program is eligible when its level matches and every category it uses is switched on
+function eligibleGenerators(level, enabledIds) {
+  return GENERATORS.filter(function (g) {
+    return (level === 'mixed' || g.level === level) &&
+      g.cats.every(function (c) { return enabledIds.indexOf(c) >= 0; });
+  });
+}
+
+function buildProgram(g) {
+  var body = g.make();
+  var lines = layout(body);
+  var steps = simulate(body);
+  var vars = [];
+  steps.forEach(function (s) {
+    if ((s.kind === 'assign' || s.kind === 'given') && vars.indexOf(s.name) < 0) vars.push(s.name);
+  });
+  return {
+    id: g.id, title: g.title, concept: g.concept, cats: g.cats, level: g.level,
+    lines: lines, steps: steps, vars: vars,
+    hasTest: steps.some(function (s) { return s.kind === 'cond'; }),
+    hasOut: steps.some(function (s) { return s.kind === 'out'; }),
+    questions: steps.filter(function (s) { return s.kind !== 'given'; }).length
+  };
+}
+
+function parseBool(raw) {
+  var t = String(raw).trim().toLowerCase();
+  if (t === 't' || t === 'true' || t === 'y' || t === 'yes' || t === '1') return true;
+  if (t === 'f' || t === 'false' || t === 'n' || t === 'no' || t === '0') return false;
+  return null;
+}
+
+function judge(step, raw) {
+  var text = String(raw).trim();
+  if (typeof step.value === 'boolean') return parseBool(text) === step.value;
+  if (typeof step.value === 'number') return text !== '' && Number(text) === step.value;
+  var plain = text.replace(/^["']|["']$/g, '');
+  return plain.toLowerCase() === String(step.value).toLowerCase();
+}
+
+function substitute(src, env) {
+  return src.replace(/"[^"]*"|[A-Za-z_][A-Za-z_0-9]*/g, function (m, offset, whole) {
+    if (m.charAt(0) === '"' || KEYWORDS[m]) return m;
+    if (/^\s*\[/.test(whole.slice(offset + m.length))) return m;
+    if (!(m in env)) return m;
+    var v = env[m];
+    return typeof v === 'string' ? '"' + v + '"' : fmtVal(v);
+  });
+}
+
+function explain(step) {
+  var val = fmtVal(step.value);
+  var sub = step.expr ? substitute(step.expr, step.env) : '';
+  var same = sub === val || sub === '"' + val + '"';
+  if (step.kind === 'cond') return sub + ' is ' + val + '.';
+  if (step.kind === 'out') return 'Line ' + (step.line + 1) + ' sends ' + sub + (same ? '' : ' = ' + val) + ' to the display.';
+  if (step.via === 'for') return step.name + ' is the loop counter, so it is now ' + val + '.';
+  if (step.via === 'each') return step.name + ' takes the next ' + step.unit + ' from the ' + (step.unit === 'letter' ? 'word' : 'list') + ', which is ' + val + '.';
+  return step.name + ' = ' + sub + (same ? '' : ' = ' + val);
+}
+// ==ENGINE-END==
+
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var STORE_KEY = 'tracetable-stats-v1';
+  var TOPICS = {
+    easy: 'Sequence, arithmetic, IF / ELSE and AND / OR.',
+    medium: 'FOR, FOR EACH and REPEAT loops, lists, strings, totals and searches.',
+    hard: 'WHILE and nested loops, MOD and DIV, flags and compound conditions.',
+    mixed: 'Every kind of program.'
+  };
+  var HL_KW = /^(SET|TO|IF|THEN|ELSE|END|FOR|FROM|EACH|DO|WHILE|REPEAT|TIMES|UNTIL|SEND|DISPLAY|AND|OR|NOT|MOD|DIV|LENGTH|True|False)$/;
+
+  var SETTINGS_KEY = 'tracetable-settings-v1';
+  function allCats() { var o = {}; CATEGORIES.forEach(function (c) { o[c.id] = true; }); return o; }
+  var settings = { level: 'medium', mode: 'practice', cats: allCats() };
+  var stats ={ correct: 0, total: 0, streak: 0, best: 0, programs: 0, bestRun: 0 };
+  var prog = null, locked = false, over = false, lives = 3, cleared = 0, lastId = null, fresh = false;
+
+  function loadStats() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      var p = JSON.parse(raw);
+      if (p && typeof p.best === 'number') stats.best = p.best;
+      if (p && typeof p.bestRun === 'number') stats.bestRun = p.bestRun;
+    } catch (e) { /* storage unavailable, carry on without it */ }
+  }
+  function saveStats() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ best: stats.best, bestRun: stats.bestRun })); }
+    catch (e) { /* ignore */ }
+  }
+
+  function enabledIds(cats) {
+    return CATEGORIES.filter(function (c) { return cats[c.id]; }).map(function (c) { return c.id; });
+  }
+  function poolFor(level, cats) { return eligibleGenerators(level, enabledIds(cats)); }
+
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return;
+      var p = JSON.parse(raw);
+      if (p && TOPICS[p.level]) settings.level = p.level;
+      if (p && (p.mode === 'practice' || p.mode === 'lives')) settings.mode = p.mode;
+      if (p && p.cats) CATEGORIES.forEach(function (c) { if (typeof p.cats[c.id] === 'boolean') settings.cats[c.id] = p.cats[c.id]; });
+      if (poolFor(settings.level, settings.cats).length === 0) settings.cats = allCats();
+    } catch (e) { /* storage unavailable, keep defaults */ }
+  }
+  function saveSettings() {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+    catch (e) { /* ignore */ }
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; });
+  }
+  function hl(text) {
+    return text.replace(/("[^"]*")|([A-Za-z_][A-Za-z_0-9]*)|([\s\S])/g, function (m, s, w, o) {
+      if (s) return '<span class="tk-str">' + esc(s) + '</span>';
+      if (w) return HL_KW.test(w) ? '<span class="tk-kw">' + w + '</span>' : w;
+      return esc(o);
+    });
+  }
+
+  function typeOf(s) {
+    if (typeof s.value === 'boolean') return 'tf';
+    return typeof s.value === 'number' ? 'num' : 'text';
+  }
+  function current() { return prog.steps[prog.idx]; }
+  function livesMode() { return settings.mode === 'lives'; }
+
+  /* ---------- rendering ---------- */
+
+  function renderStats() {
+    $('statStreak').textContent = stats.streak;
+    $('statBest').textContent = stats.best;
+    $('statProg').textContent = stats.programs;
+    $('statAcc').textContent = stats.total === 0 ? '—' : Math.round(stats.correct / stats.total * 100) + '%';
+    $('livesStat').hidden = !livesMode();
+    var d = '';
+    for (var i = 0; i < 3; i++) d += '<span class="dot' + (i < lives ? '' : ' off') + '"></span>';
+    $('lives').innerHTML = d;
+  }
+
+  function renderControls() {
+    ['segLevel', 'segMode'].forEach(function (id) {
+      var key = id === 'segLevel' ? 'level' : 'mode';
+      document.querySelectorAll('#' + id + ' button').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.dataset.val === settings[key] ? 'true' : 'false');
+      });
+    });
+    $('topicNote').textContent = TOPICS[settings.level];
+    renderCats();
+    var lv = settings.level.charAt(0).toUpperCase() + settings.level.slice(1);
+    var on = enabledIds(settings.cats).length;
+    $('sumText').innerHTML = 'Level <b>' + lv + '</b> &middot; Mode <b>' + (livesMode() ? 'Three lives' : 'Practice') +
+      '</b> &middot; <b>' + (on === CATEGORIES.length ? 'All categories' : on + ' of ' + CATEGORIES.length + ' categories') + '</b>';
+  }
+
+  // Chips show how many programs at the current level use each category
+  function renderCats() {
+    $('catChips').innerHTML = CATEGORIES.map(function (c) {
+      var n = GENERATORS.filter(function (g) {
+        return (settings.level === 'mixed' || g.level === settings.level) && g.cats.indexOf(c.id) >= 0;
+      }).length;
+      return '<button type="button" class="cat" data-cat="' + c.id + '" aria-pressed="' + (settings.cats[c.id] ? 'true' : 'false') +
+        '"' + (n === 0 ? ' disabled title="No programs use this at the current level"' : '') + '>' + esc(c.label) +
+        '<span class="ct">' + n + '</span></button>';
+    }).join('');
+    $('catsAll').hidden = enabledIds(settings.cats).length === CATEGORIES.length;
+  }
+
+  function buildCode() {
+    $('progTitle').textContent = prog.title;
+    $('progChips').innerHTML = prog.concept.map(function (c) { return '<span class="chip">' + esc(c) + '</span>'; }).join('');
+    $('code').innerHTML = prog.lines.map(function (l, i) {
+      return '<div class="ln" role="listitem" style="--ind:' + l.ind + '"><span class="no">' + (i + 1) +
+        '</span><span class="tx">' + hl(l.text) + '</span></div>';
+    }).join('');
+  }
+
+  function markLine() {
+    var kids = $('code').children;
+    for (var i = 0; i < kids.length; i++) kids[i].classList.remove('cur');
+    if (prog && !prog.done && !over && prog.idx < prog.steps.length) kids[current().line].classList.add('cur');
+  }
+
+  function colKey(kind, name) { return kind === 'cond' ? '@test' : kind === 'out' ? '@out' : name; }
+
+  function cell(cls, html) { return '<td' + (cls ? ' class="' + cls + '"' : '') + '>' + html + '</td>'; }
+
+  function rowHtml(r, active, isFresh) {
+    var key = colKey(r.kind, r.name);
+    var h = '<tr' + (isFresh ? ' class="fresh"' : '') + '>' + cell('c-line', r.line + 1);
+    function put(colId) {
+      if (colId !== key) return cell('', '');
+      if (active) return cell('target', '?');
+      if (r.state === 'given') return cell('given', esc(r.disp));
+      if (r.state === 'ok') return cell('ok', esc(r.disp));
+      return cell('bad', esc(r.disp) + '<small>you: ' + esc(r.guess) + '</small>');
+    }
+    prog.vars.forEach(function (v) { h += put(v); });
+    if (prog.hasTest) h += put('@test');
+    if (prog.hasOut) h += put('@out');
+    return h + '</tr>';
+  }
+
+  function renderTable() {
+    var h = '<thead><tr><th class="c-line">Line</th>';
+    prog.vars.forEach(function (v) { h += '<th>' + esc(v) + '</th>'; });
+    if (prog.hasTest) h += '<th>Test</th>';
+    if (prog.hasOut) h += '<th>Output</th>';
+    h += '</tr></thead><tbody>';
+    var last = prog.rows.length - 1;
+    prog.rows.forEach(function (r, i) { h += rowHtml(r, false, fresh && i === last); });
+    if (!prog.done && !over && prog.idx < prog.steps.length) {
+      var s = current();
+      h += rowHtml({ line: s.line, kind: s.kind, name: s.name }, true, false);
+    }
+    $('tt').innerHTML = h + '</tbody>';
+    var wrap = $('ttWrap');
+    wrap.scrollTop = wrap.scrollHeight;
+  }
+
+  function promptNodes(s) {
+    var frag = document.createDocumentFragment();
+    function t(x) { frag.appendChild(document.createTextNode(x)); }
+    function c(x) { var e = document.createElement('code'); e.textContent = x; frag.appendChild(e); }
+    var n = s.line + 1;
+    if (s.kind === 'cond') { t('Line ' + n + ': is '); c(s.expr); t(' true or false?'); }
+    else if (s.kind === 'out') { t('What does line ' + n + ' send to the display?'); }
+    else if (s.via === 'for') { t('Line ' + n + ': what value does '); c(s.name); t(' take on this pass?'); }
+    else if (s.via === 'each') { t('Line ' + n + ': which ' + s.unit + ' does '); c(s.name); t(' hold on this pass?'); }
+    else { t('After line ' + n + ' runs, what is '); c(s.name); t('?'); }
+    return frag;
+  }
+
+  function outputsText() {
+    var outs = prog.steps.filter(function (s) { return s.kind === 'out'; }).map(function (s) { return fmtVal(s.value); });
+    return outs.length ? 'The program displayed: ' + outs.join(', ') : '';
+  }
+
+  function renderAsk() {
+    $('askMain').hidden = true; $('askDone').hidden = true; $('askOver').hidden = true;
+    if (over) {
+      $('askOver').hidden = false;
+      $('overText').textContent = 'You traced ' + cleared + (cleared === 1 ? ' program' : ' programs') + ' this run. Best run: ' + stats.bestRun + '.';
+      return;
+    }
+    if (prog.done) {
+      $('askDone').hidden = false;
+      $('doneTitle').textContent = prog.wrong === 0 ? 'Clean trace' : 'Program traced';
+      $('doneText').textContent = prog.right + ' of ' + prog.questions + ' steps right.';
+      $('doneOut').textContent = outputsText();
+      return;
+    }
+    $('askMain').hidden = false;
+    var s = current(), type = typeOf(s), tf = type === 'tf';
+    $('qMeta').textContent = 'Step ' + (prog.answered + 1) + ' of ' + prog.questions;
+    $('meterBar').style.width = Math.round(prog.answered / prog.questions * 100) + '%';
+    $('qText').replaceChildren(promptNodes(s));
+    $('numRow').hidden = tf;
+    $('tfRow').hidden = !tf;
+    ['ans', 'checkBtn', 'tBtn', 'fBtn', 'revealBtn'].forEach(function (id) { $(id).disabled = locked; });
+    $('contBtn').hidden = !locked;
+    $('revealBtn').hidden = locked;
+    if (!locked) {
+      $('fb').textContent = ''; $('fb').className = 'fb'; $('explain').textContent = '';
+      $('ans').value = '';
+      if (!tf) setTimeout(function () { if (!locked && !prog.done && !over) $('ans').focus(); }, 20);
+      else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
+  }
+
+  function refresh() {
+    renderStats();
+    renderTable();
+    renderAsk();
+    markLine();
+  }
+
+  /* ---------- game flow ---------- */
+
+  function flushGiven() {
+    while (prog.idx < prog.steps.length && prog.steps[prog.idx].kind === 'given') {
+      var s = prog.steps[prog.idx];
+      prog.rows.push({ line: s.line, kind: 'given', name: s.name, disp: fmtVal(s.value), state: 'given' });
+      prog.idx++;
+    }
+    if (prog.idx >= prog.steps.length) finishProgram();
+  }
+
+  function finishProgram() {
+    prog.done = true;
+    stats.programs++;
+    if (livesMode()) {
+      cleared++;
+      if (cleared > stats.bestRun) stats.bestRun = cleared;
+    }
+    saveStats();
+  }
+
+  function nextProgram() {
+    var pool = poolFor(settings.level, settings.cats);
+    var g, tries = 0;
+    do { g = pick(pool); tries++; } while (pool.length > 1 && g.id === lastId && tries < 30);
+    lastId = g.id;
+    prog = buildProgram(g);
+    prog.idx = 0; prog.rows = []; prog.done = false; prog.right = 0; prog.wrong = 0; prog.answered = 0;
+    locked = false; fresh = false;
+    buildCode();
+    flushGiven();
+    refresh();
+  }
+
+  function restartRun() {
+    lives = 3; cleared = 0; over = false;
+    nextProgram();
+  }
+
+  function record(ok, guess) {
+    var s = current();
+    prog.answered++;
+    stats.total++;
+    prog.rows.push({ line: s.line, kind: s.kind, name: s.name, disp: fmtVal(s.value), state: ok ? 'ok' : 'bad', guess: guess });
+    if (ok) {
+      stats.correct++; stats.streak++; prog.right++;
+      if (stats.streak > stats.best) { stats.best = stats.streak; saveStats(); }
+    } else {
+      stats.streak = 0; prog.wrong++;
+      if (livesMode() && lives > 0) lives--;
+    }
+    fresh = true;
+  }
+
+  function answer(raw, revealed) {
+    if (locked || over || prog.done) return;
+    var s = current();
+    var text = String(raw).trim();
+    if (!revealed && text === '') return;
+    if (!revealed && typeOf(s) === 'tf' && parseBool(text) === null) return;
+    var ok = !revealed && judge(s, text);
+    record(ok, revealed ? 'shown' : text);
+    if (ok) {
+      prog.idx++;
+      flushGiven();
+      refresh();
+    } else {
+      locked = true;
+      refresh();
+      $('fb').className = 'fb bad';
+      $('fb').textContent = (revealed ? 'Here it is: ' : 'Not quite. It is ') + fmtVal(s.value) + '.';
+      $('explain').textContent = explain(s);
+      $('contBtn').focus();
+    }
+  }
+
+  function proceed() {
+    if (!locked) return;
+    locked = false;
+    prog.idx++;
+    if (livesMode() && lives <= 0) {
+      over = true;
+      refresh();
+      $('againBtn').focus();
+      return;
+    }
+    flushGiven();
+    refresh();
+    if (prog.done) $('nextBtn').focus();
+  }
+
+  /* ---------- wiring ---------- */
+
+  $('checkBtn').addEventListener('click', function () { answer($('ans').value, false); });
+  $('tBtn').addEventListener('click', function () { answer('true', false); });
+  $('fBtn').addEventListener('click', function () { answer('false', false); });
+  $('revealBtn').addEventListener('click', function () { answer('', true); });
+  $('contBtn').addEventListener('click', proceed);
+  $('nextBtn').addEventListener('click', nextProgram);
+  $('againBtn').addEventListener('click', restartRun);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey || !prog) return;
+    var active = document.activeElement;
+    var inField = !!active && active.tagName === 'INPUT';
+    if (e.key === 'Enter') {
+      if (active && active.tagName === 'BUTTON') return;
+      e.preventDefault();
+      if (over) restartRun();
+      else if (prog.done) nextProgram();
+      else if (locked) proceed();
+      else if (typeOf(current()) !== 'tf') answer($('ans').value, false);
+      return;
+    }
+    if (inField || locked || over || prog.done) return;
+    if (typeOf(current()) === 'tf') {
+      var k = e.key.toLowerCase();
+      if (k === 't' || k === 'y') { e.preventDefault(); answer('true', false); }
+      else if (k === 'f' || k === 'n') { e.preventDefault(); answer('false', false); }
+    }
+  });
+
+  function wireSeg(id, key) {
+    $(id).addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      settings[key] = b.dataset.val;
+      $('catNote').textContent = '';
+      if (poolFor(settings.level, settings.cats).length === 0) {
+        settings.cats = allCats();
+        $('catNote').textContent = 'No programs matched the chosen categories at this level, so all categories are back on.';
+      }
+      saveSettings();
+      renderControls();
+      restartRun();
+    });
+  }
+  wireSeg('segLevel', 'level');
+  wireSeg('segMode', 'mode');
+
+  $('catChips').addEventListener('click', function (e) {
+    var b = e.target.closest('button.cat');
+    if (!b || b.disabled) return;
+    var next = {};
+    for (var k in settings.cats) next[k] = settings.cats[k];
+    next[b.dataset.cat] = !next[b.dataset.cat];
+    if (poolFor(settings.level, next).length === 0) {
+      $('catNote').textContent = 'That would leave no programs at this level. Turn another category on first, or change the level.';
+      return;
+    }
+    $('catNote').textContent = '';
+    settings.cats = next;
+    saveSettings();
+    renderControls();
+    restartRun();
+  });
+  $('catsAll').addEventListener('click', function () {
+    settings.cats = allCats();
+    $('catNote').textContent = '';
+    saveSettings();
+    renderControls();
+    restartRun();
+  });
+
+  loadStats();
+  loadSettings();
+  renderControls();
+  restartRun();
+})();
+</script>
+</body></html>
