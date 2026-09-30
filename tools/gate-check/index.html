@@ -1,0 +1,801 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Gate Check — logic gate drills</title><meta name="description" content="Practise reading logic circuits and working out their output — AND, OR, NOT, NAND, NOR and XOR — with difficulty levels and a three-lives mode. Runs entirely in the browser.">
+<link rel="stylesheet" href="./style.css">
+</head>
+<body class="m-0 bg-bg text-ink font-sans text-base leading-[1.45] px-4 pt-[72px] pb-14 antialiased">
+<a class="fixed top-0 left-0 right-0 flex items-center justify-between gap-3 px-4 py-3 bg-bg border-b border-line font-mono text-[0.8rem] no-underline text-ink-dim hover:text-ink z-50" href="/">
+  <span><span class="text-pc">~/</span>wt</span>
+  <span>&larr; back to site</span>
+</a>
+
+<div class="w-full max-w-wrap mx-auto flex flex-col gap-4">
+  <header>
+    <h1 class="m-0 mb-1 text-[1.7rem] font-bold tracking-[-0.015em] [text-wrap:balance]">Gate Check</h1>
+    <p class="m-0 text-ink-dim text-[0.95rem] max-w-[60ch]">Read the circuit, follow the 1s and 0s, and work out what comes out of the other end.</p>
+  </header>
+
+  <div class="flex flex-wrap gap-y-2 gap-x-7 items-end [&_.n]:font-mono [&_.n]:text-[1.2rem] [&_.n]:font-semibold [&_.n]:leading-[1.1] [&_.n]:tabular-nums [&_.l]:text-[0.72rem] [&_.l]:text-ink-faint [&_.l]:tracking-[0.04em] [&_.l]:uppercase [&_.l]:mt-0.5">
+    <div><div class="n" id="statStreak">0</div><div class="l">streak</div></div>
+    <div><div class="n" id="statBest">0</div><div class="l">best streak</div></div>
+    <div><div class="n" id="statRounds">0</div><div class="l">challenges</div></div>
+    <div><div class="n" id="statAcc">&mdash;</div><div class="l">accuracy</div></div>
+    <div id="livesStat" hidden><div class="inline-flex gap-1.5 h-[1.32rem] items-center" id="lives" aria-label="Lives left"></div><div class="l">lives</div></div>
+  </div>
+
+  <details class="group bg-panel border border-line rounded-xl shadow-panel min-w-0" id="settingsBox">
+    <summary class="list-none cursor-pointer flex items-center gap-3 px-[18px] py-3 rounded-xl max-[420px]:px-3.5 group-open:border-b group-open:border-line group-open:rounded-b-none">
+      <span class="text-[0.72rem] tracking-[0.06em] uppercase text-ink-faint font-semibold">Settings</span>
+      <span class="flex-1 min-w-0 text-[0.92rem] text-ink-dim [overflow-wrap:anywhere] [&_b]:text-ink [&_b]:font-semibold" id="sumText"></span>
+      <span class="flex-none w-2 h-2 mr-1 border-r-2 border-b-2 border-ink-faint rotate-45 transition-transform duration-150 group-open:-rotate-[135deg]" aria-hidden="true"></span>
+    </summary>
+    <div class="flex flex-col gap-2.5 px-[18px] pt-3.5 pb-4 max-[420px]:px-3.5">
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-[0.78rem] text-ink-dim min-w-[6rem] tracking-[0.04em] uppercase">Level</span>
+        <div class="inline-flex flex-wrap flex-1 gap-0.5 p-[3px] bg-panel-2 border border-line rounded-[9px] [&>button]:flex-1 [&>button]:min-w-[72px] [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-ink-dim [&>button]:font-medium [&>button]:text-[0.85rem] [&>button]:px-2.5 [&>button]:py-[7px] [&>button]:rounded-md [&>button]:cursor-pointer [&>button]:whitespace-nowrap [&>button]:max-[420px]:min-w-[60px] [&>button[aria-pressed=true]]:bg-panel [&>button[aria-pressed=true]]:text-ink [&>button[aria-pressed=true]]:shadow-seg" id="segLevel">
+          <button type="button" data-val="easy">Easy</button>
+          <button type="button" data-val="medium">Medium</button>
+          <button type="button" data-val="hard">Hard</button>
+          <button type="button" data-val="mixed">Mixed</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-[0.78rem] text-ink-dim min-w-[6rem] tracking-[0.04em] uppercase">Mode</span>
+        <div class="inline-flex flex-wrap flex-1 gap-0.5 p-[3px] bg-panel-2 border border-line rounded-[9px] [&>button]:flex-1 [&>button]:min-w-[72px] [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-ink-dim [&>button]:font-medium [&>button]:text-[0.85rem] [&>button]:px-2.5 [&>button]:py-[7px] [&>button]:rounded-md [&>button]:cursor-pointer [&>button]:whitespace-nowrap [&>button]:max-[420px]:min-w-[60px] [&>button[aria-pressed=true]]:bg-panel [&>button[aria-pressed=true]]:text-ink [&>button[aria-pressed=true]]:shadow-seg" id="segMode">
+          <button type="button" data-val="practice">Practice</button>
+          <button type="button" data-val="lives">Three lives</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap">
+        <span class="text-[0.78rem] text-ink-dim min-w-[6rem] tracking-[0.04em] uppercase">Challenges</span>
+        <div class="flex flex-wrap items-center gap-1.5 flex-[1_1_15rem] min-w-0" id="typeChips"></div>
+        <button type="button" class="font-medium text-[0.8rem] text-kw bg-transparent border-0 px-1.5 py-1 cursor-pointer underline" id="typesAll" hidden>Select all</button>
+      </div>
+      <p class="m-0 text-[0.8rem] text-ink-faint" id="topicNote"></p>
+      <p class="note m-0 text-[0.8rem] text-bad" id="typeNote" role="status"></p>
+    </div>
+  </details>
+
+  <main class="grid grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-4 items-start max-[820px]:grid-cols-[minmax(0,1fr)]">
+    <section class="bg-panel border border-line rounded-xl shadow-panel min-w-0 p-[18px] max-[420px]:p-3.5" aria-label="Circuit">
+      <div class="flex flex-col gap-1 mb-2.5">
+        <span class="text-[0.72rem] tracking-[0.06em] uppercase text-ink-faint font-semibold" id="qMeta">Circuit</span>
+        <h2 class="m-0 text-[1.05rem] font-semibold" id="circuitTitle">&nbsp;</h2>
+      </div>
+      <div class="circuit overflow-x-auto border border-line rounded-lg bg-panel-2 p-2" id="circuitBox"></div>
+      <div class="extra mt-3" id="extraBox" hidden></div>
+    </section>
+
+    <section class="bg-panel border border-line rounded-xl shadow-panel min-w-0 p-[18px] max-[420px]:p-3.5" aria-live="polite">
+      <div id="askMain">
+        <p class="text-[1.15rem] font-medium m-0 mb-3.5 [text-wrap:balance] max-[420px]:text-[1.05rem] [&_code]:font-mono [&_code]:text-[0.95em] [&_code]:bg-panel-2 [&_code]:border [&_code]:border-line [&_code]:rounded-[5px] [&_code]:px-1.5 [&_code]:py-px" id="qText"></p>
+        <p class="-mt-1.5 mb-3.5 text-[0.85rem] text-ink-dim" id="qSub" hidden></p>
+        <div id="answerArea"></div>
+        <p class="fb" id="fb"></p>
+        <p class="mt-1 mb-0 min-h-[1.4em] font-mono text-[0.86rem] text-ink-dim whitespace-pre-line [overflow-wrap:anywhere]" id="explain"></p>
+        <div class="actions">
+          <button type="button" class="font-semibold text-[0.92rem] px-5 py-2.5 rounded-lg cursor-pointer border-[1.5px] disabled:opacity-55 disabled:cursor-default bg-transparent text-ink-dim border-line-strong" id="revealBtn">Show me</button>
+          <button type="button" class="primary" id="contBtn" hidden>Next</button>
+        </div>
+        <p class="mt-3 mb-0 text-[0.76rem] text-ink-faint" id="hint"></p>
+      </div>
+      <div id="askOver" hidden>
+        <h2 class="m-0 mb-1.5 text-[1.25rem]">Out of lives</h2>
+        <p class="m-0 mb-1.5 text-ink-dim" id="overText"></p>
+        <div class="actions"><button type="button" class="primary" id="againBtn">Play again</button></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="text-[0.76rem] text-ink-faint">Best scores are saved on this device. Wires and switches glow orange when the signal is 1.</footer>
+</div>
+
+<script>
+// ==ENGINE-START==
+function rnd(a, b) { return Math.floor(Math.random() * (b - a + 1)) + a; }
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function shuffle(a) {
+  var r = a.slice(), i, j, t;
+  for (i = r.length - 1; i > 0; i--) { j = Math.floor(Math.random() * (i + 1)); t = r[i]; r[i] = r[j]; r[j] = t; }
+  return r;
+}
+
+var GATE_FN = {
+  AND: function (a, b) { return a & b; },
+  OR: function (a, b) { return a | b; },
+  XOR: function (a, b) { return a ^ b; },
+  NAND: function (a, b) { return 1 - (a & b); },
+  NOR: function (a, b) { return 1 - (a | b); }
+};
+var GATE_RULE = {
+  AND: 'outputs 1 only when both inputs are 1',
+  OR: 'outputs 1 when at least one input is 1',
+  NOT: 'flips its input, so 1 becomes 0 and 0 becomes 1',
+  NAND: 'is AND followed by NOT, so it outputs 0 only when both inputs are 1',
+  NOR: 'is OR followed by NOT, so it outputs 1 only when both inputs are 0',
+  XOR: 'outputs 1 when the two inputs are different'
+};
+
+// Circuits are trees: an input is {k:'in'}, a gate is {k:'g', op, a, b?}. Each input is used once.
+function In(v) { return { k: 'in', v: v || '?' }; }
+function G(op, a, b) { var n = { k: 'g', op: op, a: a }; if (b) n.b = b; return n; }
+function clone(n) {
+  if (n.k === 'in') return { k: 'in', v: n.v };
+  return n.b ? G(n.op, clone(n.a), clone(n.b)) : G(n.op, clone(n.a));
+}
+function evalTree(n, env) {
+  if (n.k === 'in') return env[n.v];
+  var a = evalTree(n.a, env);
+  if (n.op === 'NOT') return a ? 0 : 1;
+  return GATE_FN[n.op](a, evalTree(n.b, env));
+}
+function annotate(n, env) {
+  if (n.k === 'in') { n.val = env[n.v]; return n.val; }
+  var a = annotate(n.a, env);
+  if (n.op === 'NOT') { n.val = a ? 0 : 1; return n.val; }
+  n.val = GATE_FN[n.op](a, annotate(n.b, env));
+  return n.val;
+}
+function relabel(n) {
+  var i = 0;
+  (function w(x) {
+    if (x.k === 'in') { x.v = String.fromCharCode(65 + i++); return; }
+    w(x.a);
+    if (x.b) w(x.b);
+  })(n);
+  return n;
+}
+function inputNames(n) {
+  var out = [];
+  (function w(x) {
+    if (x.k === 'in') { out.push(x.v); return; }
+    w(x.a);
+    if (x.b) w(x.b);
+  })(n);
+  return out;
+}
+function allEnvs(names) {
+  var rows = [], m;
+  for (m = 0; m < (1 << names.length); m++) {
+    var env = {};
+    names.forEach(function (nm, i) { env[nm] = (m >> (names.length - 1 - i)) & 1; });
+    rows.push(env);
+  }
+  return rows;
+}
+function truthRows(n) {
+  return allEnvs(inputNames(n)).map(function (env) { return { env: env, out: evalTree(n, env) }; });
+}
+function sig(n) { return truthRows(n).map(function (r) { return r.out; }).join(''); }
+
+// Boolean expression, always bracketing anything that is not a plain input
+function wrapE(c) { return c.k === 'in' ? c.v : '(' + expr(c) + ')'; }
+function expr(n) {
+  if (n.k === 'in') return n.v;
+  if (n.op === 'NOT') return 'NOT ' + wrapE(n.a);
+  return wrapE(n.a) + ' ' + n.op + ' ' + wrapE(n.b);
+}
+
+// Gate-by-gate working for an explanation
+function calcSteps(tree, env) {
+  var steps = [];
+  (function w(n) {
+    if (n.k === 'in') return env[n.v];
+    var a = w(n.a), b, v;
+    if (n.op === 'NOT') {
+      v = a ? 0 : 1;
+      steps.push(expr(n) + ' = NOT ' + a + ' = ' + v);
+      return v;
+    }
+    b = w(n.b);
+    v = GATE_FN[n.op](a, b);
+    steps.push(expr(n) + ' = ' + a + ' ' + n.op + ' ' + b + ' = ' + v);
+    return v;
+  })(tree);
+  return steps;
+}
+function envText(env, names) { return names.map(function (nm) { return nm + ' = ' + env[nm]; }).join(', '); }
+
+// Circuit shapes by level
+var OPS3 = ['AND', 'OR', 'XOR'];
+function flip(f) { return function () { var t = f(); return t; }; }
+function single(ops) { return function () { return G(pick(ops), In(), In()); }; }
+function two(mk) { return function () { var pair = mk(); return Math.random() < 0.5 ? pair : [pair[1], pair[0]]; }; }
+function combine(op, x, y) { return Math.random() < 0.5 ? G(op, x, y) : G(op, y, x); }
+var TEMPLATES = {
+  easy: [
+    single(['AND', 'OR']), single(['AND', 'OR']),
+    function () { return G('NOT', In()); }
+  ],
+  medium: [
+    single(['NAND', 'NOR', 'XOR', 'AND', 'OR']),
+    function () { return combine(pick(OPS3), G(pick(['AND', 'OR']), In(), In()), In()); },
+    function () { return combine(pick(OPS3), G('NOT', In()), In()); },
+    function () { return G('NOT', G(pick(OPS3), In(), In())); }
+  ],
+  hard: [
+    function () { return G(pick(OPS3), G(pick(OPS3), In(), In()), G(pick(OPS3), In(), In())); },
+    function () { return combine(pick(OPS3), G(pick(OPS3), In(), In()), G('NOT', In())); },
+    function () { return combine(pick(OPS3), G('NOT', G(pick(['AND', 'OR']), In(), In())), In()); },
+    function () { return G('NOT', combine(pick(OPS3), G(pick(['AND', 'OR']), In(), In()), In())); },
+    function () { return combine(pick(OPS3), G(pick(['AND', 'OR']), In(), G('NOT', In())), In()); }
+  ]
+};
+function randomTree(level, c) {
+  c = c || {};
+  for (var i = 0; i < 200; i++) {
+    var t = relabel(pick(TEMPLATES[level])());
+    var n = inputNames(t).length;
+    if (c.maxInputs && n > c.maxInputs) continue;
+    if (c.minInputs && n < c.minInputs) continue;
+    return t;
+  }
+  throw new Error('No circuit for ' + level);
+}
+
+// Wrong-but-plausible expressions for the "pick the expression" challenge
+function countNodes(n) { return n.k === 'in' ? 1 : 1 + countNodes(n.a) + (n.b ? countNodes(n.b) : 0); }
+function rebuildAt(root, target, action) {
+  var i = 0;
+  function rb(n) {
+    var idx = i++, c;
+    if (n.k === 'in') c = { k: 'in', v: n.v };
+    else { c = { k: 'g', op: n.op, a: rb(n.a) }; if (n.b) c.b = rb(n.b); }
+    return idx === target ? action(c) : c;
+  }
+  return rb(root);
+}
+function hasDoubleNot(n) {
+  if (n.k === 'in') return false;
+  if (n.op === 'NOT' && n.a.k === 'g' && n.a.op === 'NOT') return true;
+  return hasDoubleNot(n.a) || (n.b ? hasDoubleNot(n.b) : false);
+}
+function opsAllowed(level) { return level === 'easy' ? ['AND', 'OR'] : ['AND', 'OR', 'XOR', 'NAND', 'NOR']; }
+function mutateOnce(t, ops) {
+  var target = rnd(0, countNodes(t) - 1), wantOp = Math.random() < 0.55;
+  return rebuildAt(t, target, function (c) {
+    if (wantOp && c.k === 'g' && c.op !== 'NOT') {
+      var others = ops.filter(function (o) { return o !== c.op; });
+      return G(pick(others), c.a, c.b);
+    }
+    if (c.k === 'g' && c.op === 'NOT') return c.a;
+    return G('NOT', c);
+  });
+}
+function distractors(tree, level) {
+  var base = expr(tree), baseSig = sig(tree), out = [], seen = {}, ops = opsAllowed(level), t;
+  seen[base] = 1;
+  for (t = 0; t < 400 && out.length < 3; t++) {
+    var m = clone(tree), k = rnd(1, 2), i;
+    for (i = 0; i < k; i++) m = mutateOnce(m, ops);
+    if (hasDoubleNot(m)) continue;
+    var s = expr(m);
+    if (seen[s] || sig(m) === baseSig) continue;
+    seen[s] = 1;
+    out.push(m);
+  }
+  return out;
+}
+
+var TYPES = [
+  { id: 'evaluate', label: 'Evaluate the circuit' },
+  { id: 'table', label: 'Complete the truth table' },
+  { id: 'identify', label: 'Identify the gate' },
+  { id: 'make', label: 'Make the output' },
+  { id: 'expression', label: 'Pick the expression' }
+];
+
+function buildChallenge(level, type) {
+  var lvl = level === 'mixed' ? pick(['easy', 'medium', 'hard']) : level;
+  var tree, names, env, i;
+  if (type === 'evaluate') {
+    tree = randomTree(lvl);
+    names = inputNames(tree);
+    env = {};
+    names.forEach(function (n) { env[n] = rnd(0, 1); });
+    return { type: type, level: lvl, tree: tree, names: names, env: env, answer: evalTree(tree, env) };
+  }
+  if (type === 'table') {
+    tree = randomTree(lvl, { maxInputs: 3 });
+    return { type: type, level: lvl, tree: tree, names: inputNames(tree), rows: truthRows(tree) };
+  }
+  if (type === 'identify') {
+    var op = pick(lvl === 'easy' ? ['AND', 'OR', 'NOT'] : ['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR']);
+    var variant = op === 'NOT' ? 'symbol' : pick(['table', 'symbol']);
+    tree = relabel(op === 'NOT' ? G('NOT', In()) : G(op, In(), In()));
+    var options;
+    if (variant === 'table') options = lvl === 'easy' ? ['AND', 'OR'] : ['AND', 'OR', 'NAND', 'NOR', 'XOR'];
+    else options = lvl === 'easy' ? ['AND', 'OR', 'NOT'] : ['AND', 'OR', 'NOT', 'NAND', 'NOR', 'XOR'];
+    return { type: type, level: lvl, tree: tree, names: inputNames(tree), op: op, variant: variant, options: options, rows: truthRows(tree) };
+  }
+  if (type === 'make') {
+    for (i = 0; i < 100; i++) {
+      tree = randomTree(lvl, { maxInputs: 4 });
+      names = inputNames(tree);
+      var target = rnd(0, 1);
+      var sols = allEnvs(names).filter(function (e) { return evalTree(tree, e) === target; });
+      if (sols.length) return { type: type, level: lvl, tree: tree, names: names, target: target, solutions: sols, combos: 1 << names.length };
+    }
+    throw new Error('No make challenge');
+  }
+  // expression
+  for (i = 0; i < 100; i++) {
+    tree = randomTree(lvl, { minInputs: 2 });
+    var ds = distractors(tree, lvl);
+    if (ds.length < 3) continue;
+    var opts = shuffle([{ tree: tree, text: expr(tree), right: true }].concat(ds.map(function (d) { return { tree: d, text: expr(d), right: false }; })));
+    return { type: type, level: lvl, tree: tree, names: inputNames(tree), options: opts, correct: opts.map(function (o) { return o.right; }).indexOf(true) };
+  }
+  throw new Error('No expression challenge');
+}
+
+// ---- drawing ----
+var ROW = 64, COLW = 120, X0 = 104, SWX = 6, SWW = 48;
+function gateW(op) { return op === 'NOT' ? 42 : (op === 'NAND' || op === 'NOR') ? 54 : 46; }
+function gateShape(op) {
+  var and = 'M0,2 H26 A20,20 0 0 1 26,42 H0 Z';
+  var or = 'M0,2 Q24,2 46,22 Q24,42 0,42 Q13,22 0,2 Z';
+  var s = '';
+  if (op === 'AND' || op === 'NAND') s = '<path class="g-body" d="' + and + '"/>';
+  else if (op === 'OR' || op === 'NOR' || op === 'XOR') s = '<path class="g-body" d="' + or + '"/>';
+  if (op === 'XOR') s += '<path class="g-line" d="M-8,2 Q5,22 -8,42"/>';
+  if (op === 'NAND' || op === 'NOR') s += '<circle class="g-body" cx="50" cy="22" r="4"/>';
+  if (op === 'NOT') s = '<path class="g-body" d="M0,6 L34,22 L0,38 Z"/><circle class="g-body" cx="38" cy="22" r="4"/>';
+  return s;
+}
+
+// o: env (input values), values ('none' | 'inputs' | 'all'), labels, switches ('toggle' | 'fixed'), mystery
+function renderCircuit(tree, o) {
+  o = o || {};
+  var t = clone(tree), slot = 0, leaves = [], gates = [];
+  (function lay(n) {
+    if (n.k === 'in') { n.col = 0; n.y = slot++; leaves.push(n); return; }
+    lay(n.a);
+    if (n.b) lay(n.b);
+    n.col = 1 + Math.max(n.a.col, n.b ? n.b.col : 0);
+    n.y = n.b ? (n.a.y + n.b.y) / 2 : n.a.y;
+    gates.push(n);
+  })(t);
+  if (o.env) annotate(t, o.env);
+
+  var cols = t.col;
+  var W = X0 + (cols - 1) * COLW + gateW(t.op) + 84, H = 36 + (slot - 1) * ROW + 36;
+  function py(y) { return 36 + y * ROW; }
+  function gx(n) { return X0 + (n.col - 1) * COLW; }
+  function outX(n) { return n.k === 'in' ? SWX + SWW : gx(n) + gateW(n.op); }
+  function known(n) { return o.values === 'all' || (o.values === 'inputs' && n.k === 'in'); }
+  function cls(n) { return 'w ' + (known(n) && n.val !== undefined ? (n.val ? 'w1' : 'w0') : 'wx'); }
+  var low = '', high = '';
+  function addWire(d, n) {
+    var c = cls(n), p = '<path class="' + c + '" d="' + d + '"/>';
+    if (c.indexOf('w1') > 0) high += p; else low += p;
+  }
+
+  gates.forEach(function (g) {
+    var cy = py(g.y), x = gx(g), kids = g.b ? [g.a, g.b] : [g.a];
+    kids.forEach(function (c, i) {
+      var sx = outX(c), sy = py(c.y), ey = g.b ? cy + (i ? 10 : -10) : cy, ex = x + 6, xm = x - 16;
+      addWire(sy === ey ? 'M' + sx + ',' + sy + ' H' + ex : 'M' + sx + ',' + sy + ' H' + xm + ' V' + ey + ' H' + ex, c);
+    });
+  });
+  var rx = outX(t), ry = py(t.y), lx = rx + 44;
+  addWire('M' + rx + ',' + ry + ' H' + lx, t);
+
+  var gm = '';
+  gates.forEach(function (g) {
+    var x = gx(g), cy = py(g.y), w = gateW(g.op);
+    gm += '<g transform="translate(' + x + ',' + (cy - 22) + ')">';
+    if (o.mystery) gm += '<rect class="g-body g-mystery" x="0" y="2" width="46" height="40" rx="6"/><text class="g-q" x="23" y="29">?</text>';
+    else gm += gateShape(g.op);
+    if (o.labels && !o.mystery) gm += '<text class="g-label" x="' + (w / 2) + '" y="-6">' + g.op + '</text>';
+    if (o.values === 'all' && g.val !== undefined) {
+      gm += '<g class="badge"><circle cx="' + (w + 18) + '" cy="6" r="9"/><text x="' + (w + 18) + '" y="10">' + g.val + '</text></g>';
+    }
+    gm += '</g>';
+  });
+
+  var interactive = o.switches === 'toggle', sw = '';
+  leaves.forEach(function (lf) {
+    var cy = py(lf.y), on = !!o.env && o.env[lf.v] === 1;
+    sw += '<g class="sw' + (on ? ' on' : '') + (interactive ? ' toggle' : '') + '" data-in="' + lf.v + '"' +
+      (interactive ? ' tabindex="0" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="Input ' + lf.v + '"' : '') + '>' +
+      '<rect x="' + SWX + '" y="' + (cy - 15) + '" width="' + SWW + '" height="30" rx="8"/>' +
+      '<text class="sw-l" x="' + (SWX + 12) + '" y="' + (cy + 5) + '">' + lf.v + '</text>' +
+      (o.env ? '<text class="sw-v" x="' + (SWX + 34) + '" y="' + (cy + 5) + '">' + (on ? 1 : 0) + '</text>' : '') + '</g>';
+  });
+
+  var all = o.values === 'all', lampOn = all && t.val === 1;
+  var lamp = '<circle class="lamp' + (lampOn ? ' on' : '') + '" cx="' + (lx + 14) + '" cy="' + ry + '" r="14"/>' +
+    '<text class="lamp-t" x="' + (lx + 14) + '" y="' + (ry + 5) + '">' + (all ? t.val : 'Q') + '</text>' +
+    (all ? '<text class="q-l" x="' + (lx + 14) + '" y="' + (ry + 34) + '">Q</text>' : '');
+
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:' + W + 'px" role="' + (interactive ? 'group' : 'img') +
+    '" aria-label="Logic circuit with inputs ' + inputNames(tree).join(', ') + ' and output Q">' +
+    low + high + gm + sw + lamp + '</svg>';
+}
+// ==ENGINE-END==
+
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var STATS_KEY = 'gatecheck-stats-v1', SETTINGS_KEY = 'gatecheck-settings-v1';
+  var TOPICS = {
+    easy: 'Single AND, OR and NOT gates.',
+    medium: 'Adds NAND, NOR and XOR, and circuits of two gates.',
+    hard: 'Circuits of three gates with up to four inputs.',
+    mixed: 'Every circuit size.'
+  };
+
+  function allTypes() { var o = {}; TYPES.forEach(function (t) { o[t.id] = true; }); return o; }
+  var settings = { level: 'medium', mode: 'practice', types: allTypes() };
+  var stats = { correct: 0, total: 0, streak: 0, best: 0, rounds: 0, bestRun: 0 };
+  var ch = null, ui = {}, locked = false, over = false, lives = 3, cleared = 0, lastType = null, timer = null;
+
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function livesMode() { return settings.mode === 'lives'; }
+  function enabledTypes() { return TYPES.filter(function (t) { return settings.types[t.id]; }).map(function (t) { return t.id; }); }
+
+  function loadStats() {
+    try {
+      var p = JSON.parse(localStorage.getItem(STATS_KEY) || 'null');
+      if (p && typeof p.best === 'number') stats.best = p.best;
+      if (p && typeof p.bestRun === 'number') stats.bestRun = p.bestRun;
+    } catch (e) { /* storage unavailable, carry on */ }
+  }
+  function saveStats() {
+    try { localStorage.setItem(STATS_KEY, JSON.stringify({ best: stats.best, bestRun: stats.bestRun })); } catch (e) { /* ignore */ }
+  }
+  function loadSettings() {
+    try {
+      var p = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null');
+      if (!p) return;
+      if (TOPICS[p.level]) settings.level = p.level;
+      if (p.mode === 'practice' || p.mode === 'lives') settings.mode = p.mode;
+      if (p.types) TYPES.forEach(function (t) { if (typeof p.types[t.id] === 'boolean') settings.types[t.id] = p.types[t.id]; });
+      if (!enabledTypes().length) settings.types = allTypes();
+    } catch (e) { /* keep defaults */ }
+  }
+  function saveSettings() {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- settings and stats ---------- */
+
+  function renderStats() {
+    $('statStreak').textContent = stats.streak;
+    $('statBest').textContent = stats.best;
+    $('statRounds').textContent = stats.rounds;
+    $('statAcc').textContent = stats.total === 0 ? '—' : Math.round(stats.correct / stats.total * 100) + '%';
+    $('livesStat').hidden = !livesMode();
+    var d = '';
+    for (var i = 0; i < 3; i++) d += '<span class="dot' + (i < lives ? '' : ' off') + '"></span>';
+    $('lives').innerHTML = d;
+  }
+
+  function renderControls() {
+    [['segLevel', 'level'], ['segMode', 'mode']].forEach(function (p) {
+      document.querySelectorAll('#' + p[0] + ' button').forEach(function (b) {
+        b.setAttribute('aria-pressed', b.dataset.val === settings[p[1]] ? 'true' : 'false');
+      });
+    });
+    $('topicNote').textContent = TOPICS[settings.level];
+    $('typeChips').innerHTML = TYPES.map(function (t) {
+      return '<button type="button" class="chip" data-type="' + t.id + '" aria-pressed="' + (settings.types[t.id] ? 'true' : 'false') + '">' + esc(t.label) + '</button>';
+    }).join('');
+    var on = enabledTypes().length;
+    $('typesAll').hidden = on === TYPES.length;
+    var lv = settings.level.charAt(0).toUpperCase() + settings.level.slice(1);
+    $('sumText').innerHTML = 'Level <b>' + lv + '</b> &middot; Mode <b>' + (livesMode() ? 'Three lives' : 'Practice') + '</b> &middot; <b>' +
+      (on === TYPES.length ? 'All challenges' : on + ' of ' + TYPES.length + ' challenges') + '</b>';
+  }
+
+  /* ---------- building each challenge ---------- */
+
+  function truthTableHtml(c, mode) {
+    // mode: 'given' (show outputs), 'answer' (buttons), 'plain' (no output column)
+    var h = '<div class="tt-wrap"><table class="tt"><thead><tr>';
+    c.names.forEach(function (n) { h += '<th>' + n + '</th>'; });
+    h += '<th class="q">Q</th></tr></thead><tbody>';
+    c.rows.forEach(function (r, i) {
+      h += '<tr>';
+      c.names.forEach(function (n) { h += '<td>' + r.env[n] + '</td>'; });
+      if (mode === 'answer') h += '<td class="q"><button type="button" class="cell" data-r="' + i + '" aria-label="Q for row ' + (i + 1) + '">·</button></td>';
+      else h += '<td class="q' + (r.out ? ' hi' : '') + '">' + r.out + '</td>';
+      h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+
+  function setCircuit(opts) { $('circuitBox').innerHTML = renderCircuit(ch.tree, opts); }
+
+  function showChallenge() {
+    var c = ch, type = c.type, q = $('qText'), sub = $('qSub'), area = $('answerArea'), extra = $('extraBox');
+    var typeLabel = TYPES.filter(function (t) { return t.id === type; })[0].label;
+    $('qMeta').textContent = 'Challenge ' + (stats.rounds + 1);
+    $('circuitTitle').textContent = typeLabel;
+    extra.hidden = true; extra.innerHTML = '';
+    sub.hidden = true;
+    $('fb').textContent = ''; $('fb').className = 'fb'; $('explain').textContent = '';
+    $('contBtn').hidden = true; $('revealBtn').hidden = false; $('revealBtn').disabled = false;
+    var hint = '';
+
+    if (type === 'evaluate') {
+      q.textContent = 'The inputs are ' + envText(c.env, c.names) + '. What is the output Q?';
+      setCircuit({ env: c.env, values: 'inputs', labels: true, switches: 'fixed' });
+      area.innerHTML = '<div class="answer-row"><button type="button" class="tf" data-v="0">0<kbd>0</kbd></button><button type="button" class="tf" data-v="1">1<kbd>1</kbd></button></div>';
+      hint = 'Press 0 or 1 to answer.';
+    } else if (type === 'table') {
+      q.textContent = 'Fill in the Q column for this circuit.';
+      sub.textContent = 'Click a cell to flip it, or focus one and press 0 or 1.';
+      sub.hidden = false;
+      setCircuit({ labels: true });
+      ui.vals = c.rows.map(function () { return null; });
+      area.innerHTML = truthTableHtml(c, 'answer') + '<div class="actions"><button type="button" class="primary" id="checkBtn">Check</button></div>';
+      hint = 'Enter checks your table.';
+    } else if (type === 'identify') {
+      if (c.variant === 'table') {
+        q.textContent = 'This truth table belongs to one logic gate. Which one?';
+        setCircuit({ mystery: true });
+        extra.innerHTML = truthTableHtml(c, 'given'); extra.hidden = false;
+      } else {
+        q.textContent = 'Which logic gate is this symbol?';
+        setCircuit({});
+      }
+      area.innerHTML = '<div class="opts">' + c.options.map(function (o, i) {
+        return '<button type="button" class="opt" data-op="' + o + '"><kbd>' + (i + 1) + '</kbd>' + o + '</button>';
+      }).join('') + '</div>';
+      hint = 'Press a number to choose.';
+    } else if (type === 'make') {
+      ui.env = {}; c.names.forEach(function (n) { ui.env[n] = 0; });
+      q.textContent = 'Set the switches so that Q = ' + c.target + '.';
+      sub.textContent = 'Click a switch, or press its letter. Q stays hidden until you check. ' + c.solutions.length + ' of ' + c.combos + ' combinations work.';
+      sub.hidden = false;
+      drawMake();
+      area.innerHTML = '<div class="actions" style="margin-top:0"><button type="button" class="primary" id="checkBtn">Check</button></div>';
+      hint = 'Enter checks your answer.';
+    } else {
+      q.textContent = 'Which Boolean expression describes this circuit?';
+      setCircuit({});
+      area.innerHTML = '<div class="opts wide">' + c.options.map(function (o, i) {
+        return '<button type="button" class="opt" data-i="' + i + '"><kbd>' + (i + 1) + '</kbd>' + esc(o.text) + '</button>';
+      }).join('') + '</div>';
+      hint = 'Press a number to choose.';
+    }
+    $('hint').textContent = hint;
+    if (type === 'table') { var first = area.querySelector('.cell'); if (first) first.focus(); }
+    else if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
+
+  function drawMake(focusName) {
+    setCircuit({ env: ui.env, values: 'none', labels: false, switches: 'toggle' });
+    if (focusName) { var el = $('circuitBox').querySelector('.sw[data-in="' + focusName + '"]'); if (el) el.focus(); }
+  }
+
+  function nextChallenge() {
+    clearTimeout(timer);
+    var pool = enabledTypes(), type, tries = 0;
+    do { type = pool[Math.floor(Math.random() * pool.length)]; tries++; } while (pool.length > 1 && type === lastType && tries < 30);
+    lastType = type;
+    ch = buildChallenge(settings.level, type);
+    locked = false; ui = {};
+    showChallenge();
+    renderStats();
+  }
+
+  function restartRun() {
+    lives = 3; cleared = 0; over = false;
+    $('askMain').hidden = false; $('askOver').hidden = true;
+    nextChallenge();
+  }
+
+  /* ---------- judging ---------- */
+
+  function judge(ans) {
+    var c = ch, give = ans === null;
+    if (c.type === 'evaluate') {
+      var ok = !give && ans === c.answer;
+      return {
+        ok: ok, fb: (give ? 'Here it is: Q = ' : 'Not quite. Q = ') + c.answer + '.',
+        explain: calcSteps(c.tree, c.env).join('\n'),
+        reveal: function () {
+          setCircuit({ env: c.env, values: 'all', labels: true, switches: 'fixed' });
+          document.querySelectorAll('#answerArea .tf').forEach(function (b) {
+            if (+b.dataset.v === c.answer) b.classList.add('ok');
+            else if (!give && +b.dataset.v === ans) b.classList.add('bad');
+          });
+        }
+      };
+    }
+    if (c.type === 'table') {
+      if (!give && ui.vals.some(function (v) { return v === null; })) return { blank: true };
+      var wrong = 0;
+      c.rows.forEach(function (r, i) { if (give || ui.vals[i] !== r.out) wrong++; });
+      return {
+        ok: !give && wrong === 0,
+        fb: give ? 'Here is the completed table.' : 'Not quite. ' + wrong + ' of ' + c.rows.length + ' rows need fixing.',
+        explain: 'Q = ' + expr(c.tree),
+        reveal: function () {
+          document.querySelectorAll('#answerArea .cell').forEach(function (b) {
+            var i = +b.dataset.r, r = c.rows[i], mine = ui.vals[i];
+            if (!give && mine === r.out) { b.classList.add('ok'); b.textContent = r.out; }
+            else { b.classList.add('bad'); b.innerHTML = r.out + (!give && mine !== null ? '<small>you: ' + mine + '</small>' : ''); }
+          });
+        }
+      };
+    }
+    if (c.type === 'identify') {
+      return {
+        ok: !give && ans === c.op,
+        fb: (give ? 'Here it is: ' : 'Not quite. It is ') + c.op + '.',
+        explain: c.op + ' ' + GATE_RULE[c.op] + '.',
+        reveal: function () {
+          setCircuit({ labels: true });
+          if (c.variant === 'symbol') { $('extraBox').innerHTML = truthTableHtml(c, 'given'); $('extraBox').hidden = false; }
+          document.querySelectorAll('#answerArea .opt').forEach(function (b) {
+            if (b.dataset.op === c.op) b.classList.add('ok');
+            else if (!give && b.dataset.op === ans) b.classList.add('bad');
+          });
+        }
+      };
+    }
+    if (c.type === 'make') {
+      var got = evalTree(c.tree, ui.env), good = got === c.target, sol = c.solutions[0];
+      return {
+        ok: !give && good,
+        fb: give ? 'Here is one way to do it.' : 'Not quite. Your switches give Q = ' + got + '.',
+        explain: give || !good ? 'One combination that works: ' + envText(sol, c.names) + '.' : envText(ui.env, c.names) + ' gives Q = ' + got + '.',
+        reveal: function () {
+          var env = give ? sol : ui.env;
+          setCircuit({ env: env, values: 'all', labels: true, switches: 'fixed' });
+          if (give) ui.env = env;
+        }
+      };
+    }
+    // expression
+    return {
+      ok: !give && ans === c.correct,
+      fb: (give ? 'Here it is.' : 'Not quite.') + ' The circuit is ' + expr(c.tree) + '.',
+      explain: 'Q = ' + expr(c.tree),
+      reveal: function () {
+        setCircuit({ labels: true });
+        document.querySelectorAll('#answerArea .opt').forEach(function (b) {
+          var i = +b.dataset.i;
+          if (i === c.correct) b.classList.add('ok');
+          else if (!give && i === ans) b.classList.add('bad');
+        });
+      }
+    };
+  }
+
+  function resolve(ans) {
+    if (locked || over || !ch) return;
+    var r = judge(ans);
+    if (r.blank) { $('fb').className = 'fb bad'; $('fb').textContent = 'Fill in every row first.'; return; }
+    locked = true;
+    stats.total++; stats.rounds++;
+    if (r.ok) {
+      stats.correct++; stats.streak++;
+      if (stats.streak > stats.best) stats.best = stats.streak;
+      if (livesMode()) { cleared++; if (cleared > stats.bestRun) stats.bestRun = cleared; }
+      saveStats();
+    } else {
+      stats.streak = 0;
+      if (livesMode() && lives > 0) lives--;
+    }
+    r.reveal();
+    $('fb').className = 'fb ' + (r.ok ? 'ok' : 'bad');
+    $('fb').textContent = r.ok ? 'Correct.' : r.fb;
+    $('explain').textContent = r.explain;
+    document.querySelectorAll('#answerArea button, #answerArea .sw').forEach(function (b) { b.disabled = true; });
+    $('revealBtn').hidden = true;
+    $('contBtn').hidden = false;
+    renderStats();
+    if (r.ok) { timer = setTimeout(proceed, 1600); }
+    else $('contBtn').focus();
+  }
+
+  function proceed() {
+    if (!locked || over) return;
+    clearTimeout(timer);
+    if (livesMode() && lives <= 0) {
+      over = true;
+      $('askMain').hidden = true; $('askOver').hidden = false;
+      $('overText').textContent = 'You got ' + cleared + (cleared === 1 ? ' challenge' : ' challenges') + ' right this run. Best run: ' + stats.bestRun + '.';
+      $('againBtn').focus();
+      return;
+    }
+    nextChallenge();
+  }
+
+  /* ---------- wiring ---------- */
+
+  $('answerArea').addEventListener('click', function (e) {
+    if (locked || !ch) return;
+    var b = e.target.closest('button');
+    if (!b) return;
+    if (b.classList.contains('tf')) resolve(+b.dataset.v);
+    else if (b.classList.contains('opt')) resolve(ch.type === 'identify' ? b.dataset.op : +b.dataset.i);
+    else if (b.classList.contains('cell')) setCell(+b.dataset.r, ui.vals[+b.dataset.r] === 1 ? 0 : (ui.vals[+b.dataset.r] === 0 ? 1 : 0), false);
+    else if (b.id === 'checkBtn') resolve(ch.type === 'make' ? 0 : 0);
+  });
+
+  function setCell(i, v, advance) {
+    ui.vals[i] = v;
+    var cells = document.querySelectorAll('#answerArea .cell');
+    cells[i].textContent = v; cells[i].classList.add('set');
+    if (advance && cells[i + 1]) cells[i + 1].focus();
+  }
+
+  function toggleSwitch(name) {
+    if (locked || !ch || ch.type !== 'make' || !(name in ui.env)) return;
+    ui.env[name] = ui.env[name] ? 0 : 1;
+    drawMake(name);
+  }
+  $('circuitBox').addEventListener('click', function (e) {
+    var g = e.target.closest('.sw.toggle');
+    if (g) toggleSwitch(g.dataset.in);
+  });
+  $('circuitBox').addEventListener('keydown', function (e) {
+    var g = e.target.closest && e.target.closest('.sw.toggle');
+    if (g && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); e.stopPropagation(); toggleSwitch(g.dataset.in); }
+  });
+
+  $('revealBtn').addEventListener('click', function () { resolve(null); });
+  $('contBtn').addEventListener('click', proceed);
+  $('againBtn').addEventListener('click', restartRun);
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey || !ch) return;
+    var active = document.activeElement;
+    if (active && active.closest && active.closest('.sw.toggle')) { if (e.key === ' ' || e.key === 'Enter') return; }
+    if (e.key === 'Enter') {
+      if (over) { e.preventDefault(); restartRun(); return; }
+      if (locked) { if (active && active.tagName === 'BUTTON' && active.id === 'contBtn') return; e.preventDefault(); proceed(); return; }
+      if (active && active.classList && active.classList.contains('cell')) { e.preventDefault(); resolve(0); return; }
+      if (active && active.tagName === 'BUTTON') return;
+      if (ch.type === 'table' || ch.type === 'make') { e.preventDefault(); resolve(0); }
+      return;
+    }
+    if (locked || over) return;
+    var k = e.key.toLowerCase();
+    if (ch.type === 'evaluate' && (k === '0' || k === '1')) { e.preventDefault(); resolve(+k); }
+    else if (ch.type === 'identify' && /^[1-9]$/.test(k) && ch.options[+k - 1]) { e.preventDefault(); resolve(ch.options[+k - 1]); }
+    else if (ch.type === 'expression' && /^[1-4]$/.test(k)) { e.preventDefault(); resolve(+k - 1); }
+    else if (ch.type === 'make' && /^[a-d]$/.test(k)) { e.preventDefault(); toggleSwitch(k.toUpperCase()); }
+    else if (ch.type === 'table' && (k === '0' || k === '1') && active && active.classList && active.classList.contains('cell')) {
+      e.preventDefault(); setCell(+active.dataset.r, +k, true);
+    }
+  });
+
+  function wireSeg(id, key) {
+    $(id).addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      settings[key] = b.dataset.val;
+      $('typeNote').textContent = '';
+      saveSettings(); renderControls(); restartRun();
+    });
+  }
+  wireSeg('segLevel', 'level');
+  wireSeg('segMode', 'mode');
+
+  $('typeChips').addEventListener('click', function (e) {
+    var b = e.target.closest('button.chip');
+    if (!b) return;
+    var id = b.dataset.type, next = !settings.types[id];
+    if (!next && enabledTypes().length === 1) { $('typeNote').textContent = 'Keep at least one challenge switched on.'; return; }
+    $('typeNote').textContent = '';
+    settings.types[id] = next;
+    saveSettings(); renderControls(); restartRun();
+  });
+  $('typesAll').addEventListener('click', function () {
+    settings.types = allTypes(); $('typeNote').textContent = '';
+    saveSettings(); renderControls(); restartRun();
+  });
+
+  loadStats();
+  loadSettings();
+  renderControls();
+  restartRun();
+})();
+</script>
+</body></html>
