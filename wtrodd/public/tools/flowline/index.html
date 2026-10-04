@@ -1,0 +1,1553 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flowline</title>
+<meta name="description" content="Build GCSE-style flowcharts with the proper symbols, run them step by step and have them marked against test cases, then practise tracing and spotting mistakes. Runs entirely in the browser.">
+<style>
+/* Same zinc/orange tokens as the main site and Bit Panel so the collection reads as one set. */
+:root {
+  --bg: #FAFAFA;
+  --panel: #FFFFFF;
+  --panel-2: #F4F4F5;
+  --line: #E4E4E7;
+  --line-strong: #D4D4D8;
+  --ink: #18181B;
+  --ink-dim: #52525B;
+  --ink-faint: #71717A;
+  --pc: #EA580C;
+  --pc-wash: #FFEDD5;
+  --pc-ink: #9A3412;
+  --on-pc: #18181B;
+  --ok: #15803D;
+  --ok-wash: #DCFCE7;
+  --bad: #DC2626;
+  --bad-wash: #FEE2E2;
+  --kw: #2563EB;
+  --shadow: rgba(24, 24, 27, 0.08);
+  --sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #09090B;
+    --panel: #18181B;
+    --panel-2: #131316;
+    --line: #27272A;
+    --line-strong: #3F3F46;
+    --ink: #F4F4F5;
+    --ink-dim: #A1A1AA;
+    --ink-faint: #71717A;
+    --pc: #FB923C;
+    --pc-wash: #3A1D0C;
+    --pc-ink: #FDBA74;
+    --on-pc: #09090B;
+    --ok: #4ADE80;
+    --ok-wash: #0F2A1A;
+    --bad: #F87171;
+    --bad-wash: #3A1618;
+    --kw: #93C5FD;
+    --shadow: rgba(0, 0, 0, 0.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #09090B;
+  --panel: #18181B;
+  --panel-2: #131316;
+  --line: #27272A;
+  --line-strong: #3F3F46;
+  --ink: #F4F4F5;
+  --ink-dim: #A1A1AA;
+  --ink-faint: #71717A;
+  --pc: #FB923C;
+  --pc-wash: #3A1D0C;
+  --pc-ink: #FDBA74;
+  --on-pc: #09090B;
+  --ok: #4ADE80;
+  --ok-wash: #0F2A1A;
+  --bad: #F87171;
+  --bad-wash: #3A1618;
+  --kw: #93C5FD;
+  --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--ink); }
+body { margin: 0; font-family: var(--sans); font-size: 16px; line-height: 1.45; padding-inline: 16px; padding-block: 28px 56px; -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
+.wrap { width: 100%; max-width: 1180px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+header h1 { margin: 0 0 4px; font-size: 1.7rem; font-weight: 700; letter-spacing: -0.015em; }
+header p { margin: 0; color: var(--ink-dim); font-size: 0.95rem; max-width: 66ch; }
+
+.stats { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: flex-end; }
+.stat .n { font-family: var(--mono); font-size: 1.2rem; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat .l { font-size: 0.72rem; color: var(--ink-faint); letter-spacing: 0.04em; text-transform: uppercase; margin-top: 2px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; box-shadow: 0 6px 20px var(--shadow); min-width: 0; }
+.topbar { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 10px 24px; padding: 12px 16px; }
+.topbar .topic-note { grid-column: 1 / -1; }
+.control-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ctl-label { font-size: 0.78rem; color: var(--ink-dim); letter-spacing: 0.04em; text-transform: uppercase; }
+.seg { display: inline-flex; flex-wrap: wrap; flex: 1; gap: 2px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
+.seg button { flex: 1; min-width: 64px; border: 0; background: transparent; color: var(--ink-dim); font: 500 0.85rem var(--sans); padding: 7px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 3px var(--shadow), inset 0 -2px 0 var(--pc); }
+.topic-note { margin: 0; font-size: 0.8rem; color: var(--ink-faint); }
+.eyebrow { font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; }
+
+.board { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.canvas-panel { padding: 0; overflow: hidden; }
+.palette { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--panel); align-items: center; }
+.palette .sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 4px; }
+button.pal { display: inline-flex; align-items: center; gap: 7px; font: 500 0.8rem var(--sans); padding: 5px 10px 5px 7px; border-radius: 8px; cursor: pointer; background: var(--panel-2); color: var(--ink); border: 1.5px solid var(--line); }
+button.pal:hover { border-color: var(--line-strong); }
+button.pal svg { width: 32px; height: 20px; flex: none; }
+button.pal svg .s { fill: var(--panel); stroke: var(--ink-dim); stroke-width: 1.6; stroke-linejoin: round; }
+button.tool { font: 500 0.8rem var(--sans); padding: 6px 10px; border-radius: 8px; cursor: pointer; background: transparent; color: var(--ink-dim); border: 1.5px solid var(--line-strong); }
+button.tool[aria-pressed="true"] { background: var(--pc-wash); border-color: var(--pc); color: var(--pc-ink); }
+button.tool:disabled, button.pal:disabled { opacity: 0.45; cursor: default; }
+.canvas-wrap { position: relative; max-height: 78vh; min-height: 300px; overflow: auto; background: var(--panel-2); }
+#chartHost svg { display: block; width: 100%; height: auto; margin-inline: auto; user-select: none; -webkit-user-select: none; }
+.canvas-foot { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 0.8rem; color: var(--ink-faint); min-height: 38px; }
+.toast { color: var(--ink); background: var(--pc-wash); border: 1px solid var(--pc); border-radius: 6px; padding: 3px 9px; font-weight: 500; }
+.toast.bad { background: var(--bad-wash); border-color: var(--bad); color: var(--bad); }
+
+button.primary, button.ghost { font: 600 0.9rem var(--sans); padding: 9px 16px; border-radius: 8px; cursor: pointer; }
+button.primary { background: var(--pc); color: var(--on-pc); border: 1.5px solid var(--pc); }
+button.ghost { background: transparent; color: var(--ink-dim); border: 1.5px solid var(--line-strong); }
+button.sm { padding: 6px 12px; font-size: 0.82rem; }
+button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--pc); outline-offset: 2px; }
+input[type=text], select { font: 500 0.92rem var(--mono); color: var(--ink); background: var(--panel-2); border: 1.5px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; width: 100%; min-width: 0; }
+select { font-family: var(--sans); }
+.chip { font: 500 0.8rem var(--sans); cursor: pointer; padding: 4px 11px; border-radius: 999px; color: var(--ink-dim); background: transparent; border: 1.5px solid var(--line-strong); }
+.chip[aria-pressed="true"] { background: var(--pc-wash); border-color: var(--pc); color: var(--pc-ink); }
+.chip.mono { font-family: var(--mono); padding: 3px 11px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.side { display: flex; flex-direction: column; gap: 14px; }
+.side > section + section:not([hidden]) { border-top: 1px solid var(--line); padding-top: 14px; }
+.side h2 { margin: 3px 0 6px; font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+.side p { margin: 0 0 8px; font-size: 0.92rem; }
+.side .dim { color: var(--ink-dim); font-size: 0.84rem; }
+.lvl { display: inline-block; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--ink-dim); vertical-align: 2px; margin-left: 6px; }
+.task-nav { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+.task-nav select { flex: 1; }
+.examples { font-family: var(--mono); font-size: 0.8rem; background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 3px; }
+.examples b { font-weight: 600; color: var(--pc-ink); }
+.hintbox { background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--pc); border-radius: 6px; padding: 8px 10px; font-size: 0.86rem; color: var(--ink-dim); margin-top: 8px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+.field { display: grid; gap: 4px; margin: 8px 0; font-size: 0.78rem; color: var(--ink-dim); letter-spacing: 0.04em; text-transform: uppercase; }
+.field input { text-transform: none; letter-spacing: 0; }
+.insert-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+.banner { border-radius: 8px; padding: 9px 12px; font-weight: 600; font-size: 0.92rem; margin-bottom: 8px; border: 1px solid; }
+.banner.ok { background: var(--ok-wash); border-color: var(--ok); color: var(--ok); }
+.banner.bad { background: var(--bad-wash); border-color: var(--bad); color: var(--bad); }
+.issue { display: flex; gap: 8px; align-items: baseline; text-align: left; width: 100%; font: 400 0.85rem var(--sans); background: transparent; color: var(--ink); border: 0; border-bottom: 1px solid var(--line); padding: 6px 2px; cursor: pointer; }
+.issue .tag { flex: none; font: 700 0.64rem var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--bad); }
+.issue .tag.warn { color: var(--pc-ink); }
+.trow { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 0.84rem; }
+.trow .m { flex: none; width: 1.3em; font-weight: 700; text-align: center; }
+.trow.ok .m { color: var(--ok); } .trow.bad .m { color: var(--bad); }
+.trow .tx { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--mono); font-size: 0.78rem; }
+.trow .why { font-family: var(--sans); font-size: 0.82rem; color: var(--bad); margin-top: 2px; }
+.trow button { flex: none; }
+
+.runstate { display: grid; gap: 8px; margin-top: 10px; }
+.status { font-size: 0.86rem; font-weight: 600; }
+.status.err { color: var(--bad); } .status.done { color: var(--ok); }
+.vars { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+.var { font: 500 0.8rem var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 2px 8px; }
+.var b { color: var(--pc-ink); font-weight: 600; }
+.outlog { font: 500 0.84rem var(--mono); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-height: 38px; display: grid; gap: 2px; }
+.outlog:empty::before { content: 'Nothing output yet'; color: var(--ink-faint); font-family: var(--sans); }
+.prompt { display: flex; gap: 8px; align-items: center; }
+.prompt label { font: 600 0.82rem var(--mono); white-space: nowrap; color: var(--pc-ink); }
+.fb { margin: 8px 0 0; font-weight: 600; font-size: 0.92rem; }
+.fb.ok { color: var(--ok); } .fb.bad { color: var(--bad); }
+.explain { margin-top: 8px; font-size: 0.86rem; color: var(--ink-dim); background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--pc); border-radius: 6px; padding: 8px 10px; }
+.linkbtn { font: 500 0.78rem var(--sans); color: var(--ink-faint); background: none; border: 0; padding: 4px 0; cursor: pointer; text-decoration: underline; margin-left: auto; }
+kbd { font-family: var(--mono); font-size: 0.7rem; padding: 0 5px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--ink-faint); }
+footer { font-size: 0.76rem; color: var(--ink-faint); }
+
+@media (max-width: 900px) {
+  .board { grid-template-columns: minmax(0, 1fr); }
+  .topbar { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .control-row { gap: 6px; }
+  .ctl-label { flex-basis: 100%; }
+}
+@media (max-width: 420px) {
+  .seg button { min-width: 0; padding-inline: 4px; font-size: 0.8rem; }
+  .panel { padding: 14px; }
+  .canvas-panel { padding: 0; }
+}
+</style><style>body{margin:0}
+.site-bar { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 0.8rem; text-decoration: none; color: var(--ink-dim); z-index: 50; }
+.site-bar:hover { color: var(--ink); }
+.site-bar-tilde { color: var(--pc); }
+body { padding-top: 72px; }
+</style></head><body>
+<a class="site-bar" href="/">
+  <span><span class="site-bar-tilde">~/</span>wt</span>
+  <span>&larr; back to site</span>
+</a>
+
+<div class="wrap">
+  <header>
+    <h1>Flowline</h1>
+    <p>Build GCSE-style flowcharts with the proper symbols, run them step by step, and get them marked against test cases. Then practise tracing flowcharts and spotting mistakes.</p>
+  </header>
+
+  <div class="stats" id="stats" hidden>
+    <div class="stat"><div class="n" id="statStreak">0</div><div class="l">Streak</div></div>
+    <div class="stat"><div class="n" id="statBest">0</div><div class="l">Best streak</div></div>
+    <div class="stat"><div class="n" id="statAnswered">0</div><div class="l">Answered</div></div>
+    <div class="stat"><div class="n" id="statAcc">&ndash;</div><div class="l">Accuracy</div></div>
+  </div>
+
+  <div class="panel topbar">
+    <div class="control-row"><span class="ctl-label">Mode</span><div class="seg" id="segMode"></div></div>
+    <div class="control-row" id="levelRow"><span class="ctl-label">Level</span><div class="seg" id="segLevel"></div></div>
+    <p class="topic-note" id="modeNote"></p>
+  </div>
+
+  <div class="board">
+    <section class="panel canvas-panel">
+      <div class="palette" id="palette">
+        <button type="button" class="pal" data-act="add:term:Start" title="Terminator: Start"><svg viewBox="0 0 32 20"><rect class="s" x="2" y="4" width="28" height="12" rx="6"/></svg>Start</button>
+        <button type="button" class="pal" data-act="add:term:Stop" title="Terminator: Stop"><svg viewBox="0 0 32 20"><rect class="s" x="2" y="4" width="28" height="12" rx="6"/></svg>Stop</button>
+        <button type="button" class="pal" data-act="add:proc:" title="Process: a calculation or assignment"><svg viewBox="0 0 32 20"><rect class="s" x="2" y="3" width="28" height="14" rx="1"/></svg>Process</button>
+        <button type="button" class="pal" data-act="add:io:" title="Input / output"><svg viewBox="0 0 32 20"><polygon class="s" points="8,3 30,3 24,17 2,17"/></svg>Input / output</button>
+        <button type="button" class="pal" data-act="add:dec:" title="Decision: a Yes/No question"><svg viewBox="0 0 32 20"><polygon class="s" points="16,1 30,10 16,19 2,10"/></svg>Decision</button>
+        <button type="button" class="pal" data-act="add:sub:" title="Subroutine"><svg viewBox="0 0 32 20"><rect class="s" x="2" y="3" width="28" height="14" rx="1"/><line class="s" x1="6" y1="3" x2="6" y2="17"/><line class="s" x1="26" y1="3" x2="26" y2="17"/></svg>Subroutine</button>
+        <span class="sep"></span>
+        <button type="button" class="tool" data-act="connect" id="connectBtn" aria-pressed="false" title="Click one symbol, then another, to draw an arrow">Draw arrow</button>
+        <button type="button" class="tool" data-act="undo" id="undoBtn">Undo</button>
+        <button type="button" class="tool" data-act="redo" id="redoBtn">Redo</button>
+        <button type="button" class="tool" data-act="delsel" id="delBtn">Delete</button>
+        <button type="button" class="tool" data-act="clear" id="clearBtn">Clear</button>
+        <button type="button" class="tool" data-act="savesvg" title="Download the flowchart as an SVG picture">Save SVG</button>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap"><div id="chartHost"></div></div>
+      <div class="canvas-foot"><span id="footMsg"></span><span id="toast" class="toast" hidden></span></div>
+    </section>
+
+    <aside class="panel side" id="side">
+      <section id="secTask"></section>
+      <section id="secInspect" hidden></section>
+      <section id="secCheck" hidden></section>
+      <section id="secRun" hidden>
+        <div class="eyebrow">Step through</div>
+        <div id="runInRow">
+          <label class="field">Inputs, separated by commas<input type="text" id="runIn" placeholder="e.g. 4, 7" autocomplete="off"></label>
+        </div>
+        <div class="actions" style="margin-top:4px">
+          <button type="button" class="primary sm" data-act="step" id="stepBtn">Step</button>
+          <button type="button" class="ghost sm" data-act="play" id="playBtn">Play</button>
+          <button type="button" class="ghost sm" data-act="resetrun">Reset</button>
+        </div>
+        <div class="runstate">
+          <div class="status" id="runStatus"></div>
+          <div class="prompt" id="runPrompt" hidden><label id="promptLabel"></label><input type="text" id="promptIn" autocomplete="off" aria-label="Value to input"><button type="button" class="primary sm" data-act="enterinput">Enter</button></div>
+          <div><div class="eyebrow" style="margin-bottom:4px">Variables</div><div class="vars" id="runVars"></div></div>
+          <div><div class="eyebrow" style="margin-bottom:4px">Output</div><div class="outlog" id="runOut"></div></div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <footer>Symbols follow the Edexcel GCSE style. In the editor: drag symbols to move them, drag the orange dot onto another symbol to join them, <kbd>Del</kbd> removes the selected item, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes. Use <kbd>&larr;</kbd> typed as <kbd>&lt;-</kbd>.</footer>
+</div>
+
+<script>
+// ==ENGINE-START==
+/* =====================================================================
+   Flowline engine: no DOM in here, so it can be tested in node.
+   Chart model: { nodes:[{id,type,text,x,y}], edges:[{id,from,to,label,port?}] }
+   Node types: term (start/stop), proc, io, dec, sub.   x,y are the node's centre.
+   ===================================================================== */
+var GAP = 46, HGAP = 34, MAXSTEPS = 600;
+
+function rnd(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function fail(msg) { return { msg: msg }; }
+
+/* ---------- sizes ---------- */
+function wrapText(text, max) {
+  var out = [];
+  String(text || '').split('\n').forEach(function (par) {
+    var words = par.split(/\s+/).filter(Boolean), line = '';
+    if (!words.length) { out.push(''); return; }
+    words.forEach(function (w) {
+      if (line && (line + ' ' + w).length > max) { out.push(line); line = w; }
+      else line = line ? line + ' ' + w : w;
+    });
+    out.push(line);
+  });
+  return out.length ? out : [''];
+}
+function sizeOf(n) {
+  var lines = wrapText(n.text, n.type === 'dec' ? 16 : 26), L = 0, lh = 17;
+  lines.forEach(function (l) { L = Math.max(L, l.length); });
+  var h = Math.max(46, lines.length * lh + 22);
+  switch (n.type) {
+    case 'term': return { w: Math.max(120, L * 8.2 + 44), h: 44, lines: lines };
+    case 'io': return { w: Math.max(176, L * 8.2 + 64), h: h, lines: lines };
+    case 'dec': return { w: Math.max(184, L * 8.2 * 1.55 + 40), h: Math.max(88, lines.length * lh * 1.7 + 34), lines: lines };
+    case 'sub': return { w: Math.max(166, L * 8.2 + 52), h: h, lines: lines };
+    default: return { w: Math.max(156, L * 8.2 + 36), h: h, lines: lines };
+  }
+}
+function nodeBox(n) {
+  var s = sizeOf(n), inset = n.type === 'io' ? 7 : 0; // a parallelogram's slanted sides meet the arrows 7px in
+  return { id: n.id, l: n.x - s.w / 2 + inset, r: n.x + s.w / 2 - inset, t: n.y - s.h / 2, b: n.y + s.h / 2, cx: n.x, cy: n.y, w: s.w, h: s.h };
+}
+function boxesOf(chart) { var m = {}; chart.nodes.forEach(function (n) { m[n.id] = nodeBox(n); }); return m; }
+function byId(chart, id) { for (var i = 0; i < chart.nodes.length; i++) if (chart.nodes[i].id === id) return chart.nodes[i]; return null; }
+function outEdges(chart, id) { return chart.edges.filter(function (e) { return e.from === id; }); }
+function inEdges(chart, id) { return chart.edges.filter(function (e) { return e.to === id; }); }
+function cloneChart(c) { return JSON.parse(JSON.stringify(c)); }
+
+/* ---------- expressions ---------- */
+function tokenize(src) {
+  var s = String(src).replace(/[“”]/g, '"').replace(/[‘’]/g, "'")
+    .replace(/≥/g, '>=').replace(/≤/g, '<=').replace(/≠/g, '!=').replace(/×/g, '*').replace(/÷/g, '/');
+  var toks = [], i = 0, m;
+  while (i < s.length) {
+    var c = s.charAt(i);
+    if (/\s/.test(c)) { i++; continue; }
+    if (c === '"' || c === "'") {
+      var j = s.indexOf(c, i + 1);
+      if (j < 0) throw fail('There is a missing closing quote after ' + s.slice(i));
+      toks.push({ t: 'str', v: s.slice(i + 1, j) }); i = j + 1; continue;
+    }
+    var rest = s.slice(i);
+    m = /^(\d+\.?\d*|\.\d+)/.exec(rest);
+    if (m) { toks.push({ t: 'num', v: parseFloat(m[1]) }); i += m[1].length; continue; }
+    m = /^[A-Za-z_][A-Za-z0-9_]*/.exec(rest);
+    if (m) {
+      var w = m[0], u = w.toUpperCase();
+      toks.push(['AND', 'OR', 'NOT', 'DIV', 'MOD', 'TRUE', 'FALSE'].indexOf(u) >= 0 ? { t: 'kw', v: u } : { t: 'id', v: w });
+      i += w.length; continue;
+    }
+    m = /^(←|<-|:=|<=|>=|!=|<>|==|[=<>+\-*\/^%(),])/.exec(rest);
+    if (m) { toks.push({ t: 'op', v: m[1] }); i += m[1].length; continue; }
+    throw fail('I don’t understand the symbol “' + c + '”');
+  }
+  return toks;
+}
+
+function parseExpr(toks) {
+  var p = 0;
+  function isOp(v) { var t = toks[p]; return !!t && t.t === 'op' && t.v === v; }
+  function isKw(v) { var t = toks[p]; return !!t && t.t === 'kw' && t.v === v; }
+  function orE() { var l = andE(); while (isKw('OR')) { p++; l = { k: 'bin', op: 'OR', l: l, r: andE() }; } return l; }
+  function andE() { var l = notE(); while (isKw('AND')) { p++; l = { k: 'bin', op: 'AND', l: l, r: notE() }; } return l; }
+  function notE() { if (isKw('NOT')) { p++; return { k: 'not', e: notE() }; } return cmp(); }
+  function cmp() {
+    var l = add(), t = toks[p];
+    if (t && t.t === 'op' && ['=', '==', '!=', '<>', '<', '>', '<=', '>='].indexOf(t.v) >= 0) {
+      p++;
+      return { k: 'bin', op: t.v === '==' ? '=' : t.v === '<>' ? '!=' : t.v, l: l, r: add() };
+    }
+    return l;
+  }
+  function add() {
+    var l = mul();
+    while (toks[p] && toks[p].t === 'op' && (toks[p].v === '+' || toks[p].v === '-')) { var op = toks[p].v; p++; l = { k: 'bin', op: op, l: l, r: mul() }; }
+    return l;
+  }
+  function mul() {
+    var l = pow();
+    for (;;) {
+      var t = toks[p];
+      if (t && ((t.t === 'op' && (t.v === '*' || t.v === '/' || t.v === '%')) || (t.t === 'kw' && (t.v === 'DIV' || t.v === 'MOD')))) {
+        p++; l = { k: 'bin', op: t.v === '%' ? 'MOD' : t.v, l: l, r: pow() };
+      } else break;
+    }
+    return l;
+  }
+  function pow() { var b = unary(); if (isOp('^')) { p++; return { k: 'bin', op: '^', l: b, r: pow() }; } return b; }
+  function unary() {
+    if (isOp('-')) { p++; return { k: 'neg', e: unary() }; }
+    if (isOp('+')) { p++; return unary(); }
+    return prim();
+  }
+  function prim() {
+    var t = toks[p];
+    if (!t) throw fail('The expression seems to stop too soon');
+    if (t.t === 'num' || t.t === 'str') { p++; return { k: 'lit', v: t.v }; }
+    if (t.t === 'kw' && (t.v === 'TRUE' || t.v === 'FALSE')) { p++; return { k: 'lit', v: t.v === 'TRUE' }; }
+    if (t.t === 'id') {
+      p++;
+      if (isOp('(')) {
+        p++;
+        var args = [];
+        if (!isOp(')')) { args.push(orE()); while (isOp(',')) { p++; args.push(orE()); } }
+        if (!isOp(')')) throw fail('There is a missing closing bracket');
+        p++;
+        return { k: 'call', f: t.v.toUpperCase(), args: args };
+      }
+      return { k: 'var', n: t.v };
+    }
+    if (t.t === 'op' && t.v === '(') {
+      p++;
+      var e = orE();
+      if (!isOp(')')) throw fail('There is a missing closing bracket');
+      p++;
+      return e;
+    }
+    throw fail('I didn’t expect “' + t.v + '” here');
+  }
+  var e = orE();
+  if (p < toks.length) throw fail('I didn’t expect “' + toks[p].v + '” here. Check spelling, quotes and brackets');
+  return e;
+}
+
+function fmt(v) {
+  if (typeof v === 'boolean') return v ? 'True' : 'False';
+  if (typeof v === 'number') { if (!isFinite(v)) return String(v); return Number.isInteger(v) ? String(v) : String(parseFloat(v.toFixed(8))); }
+  return String(v);
+}
+function showVal(v) { return typeof v === 'string' ? '“' + v + '”' : fmt(v); }
+function num(v, what) {
+  if (typeof v !== 'number') throw fail('You can’t do arithmetic with ' + (typeof v === 'string' ? 'text (' + showVal(v) + ')' : 'True/False') + ' (' + what + ')');
+  return v;
+}
+function evalAst(a, vars) {
+  switch (a.k) {
+    case 'lit': return a.v;
+    case 'var':
+      if (!Object.prototype.hasOwnProperty.call(vars, a.n)) throw fail('“' + a.n + '” has no value yet. Was it INPUT or set earlier in the flowchart? (Text must be in quotes.)');
+      return vars[a.n];
+    case 'neg': return -num(evalAst(a.e, vars), 'minus');
+    case 'not': { var b = evalAst(a.e, vars); if (typeof b !== 'boolean') throw fail('NOT needs a True/False value'); return !b; }
+    case 'call': {
+      var args = a.args.map(function (x) { return evalAst(x, vars); });
+      if (args.length !== 1) throw fail(a.f + ' needs exactly one value in brackets');
+      if (a.f === 'LEN') return fmt(args[0]).length;
+      if (a.f === 'INT') return Math.trunc(num(args[0], 'INT'));
+      if (a.f === 'STR') return fmt(args[0]);
+      throw fail('I don’t know a function called ' + a.f);
+    }
+    case 'bin': {
+      var l = evalAst(a.l, vars), r = evalAst(a.r, vars), op = a.op;
+      if (op === 'AND' || op === 'OR') {
+        if (typeof l !== 'boolean' || typeof r !== 'boolean') throw fail(op + ' needs True/False on both sides, e.g. x > 1 ' + op + ' x < 9');
+        return op === 'AND' ? (l && r) : (l || r);
+      }
+      if (op === '=') return typeof l === typeof r && l === r;
+      if (op === '!=') return !(typeof l === typeof r && l === r);
+      if (op === '<' || op === '>' || op === '<=' || op === '>=') {
+        if (typeof l !== typeof r || typeof l === 'boolean') throw fail('You can’t compare ' + showVal(l) + ' with ' + showVal(r));
+        return op === '<' ? l < r : op === '>' ? l > r : op === '<=' ? l <= r : l >= r;
+      }
+      if (op === '+' && (typeof l === 'string' || typeof r === 'string')) return fmt(l) + fmt(r);
+      var x = num(l, op), y = num(r, op);
+      switch (op) {
+        case '+': return x + y;
+        case '-': return x - y;
+        case '*': return x * y;
+        case '^': return Math.pow(x, y);
+        case '/': if (y === 0) throw fail('You can’t divide by zero'); return x / y;
+        case 'DIV': if (y === 0) throw fail('You can’t divide by zero'); return Math.floor(x / y);
+        case 'MOD': if (y === 0) throw fail('You can’t divide by zero'); return ((x % y) + y) % y;
+      }
+    }
+  }
+  throw fail('Could not work that out');
+}
+
+/* ---------- compiling a symbol's text ---------- */
+var IN_RE = /^\s*(input|enter|read|get)\b[:\s]*/i;
+var OUT_RE = /^\s*(output|print|display|show|write)\b[:\s]*/i;
+var NAME_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+function termRole(n) {
+  var t = String(n.text || '').trim();
+  if (/^(start|begin)\b/i.test(t)) return 'start';
+  if (/^(stop|end|finish)\b/i.test(t)) return 'end';
+  return null;
+}
+function splitTop(s) {
+  var parts = [], depth = 0, q = null, cur = '';
+  for (var i = 0; i < s.length; i++) {
+    var c = s.charAt(i);
+    if (q) { cur += c; if (c === q) q = null; continue; }
+    if (c === '"' || c === "'" || c === '“' || c === '‘') { q = c === '“' ? '”' : c === '‘' ? '’' : c; cur += c; continue; }
+    if (c === '(') depth++;
+    if (c === ')') depth--;
+    if (c === ',' && depth === 0) { parts.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  parts.push(cur);
+  return parts.map(function (x) { return x.trim(); });
+}
+function compileNode(n) {
+  var text = String(n.text || '').trim();
+  try {
+    if (n.type === 'term') { var r = termRole(n); return r ? { kind: r } : { err: 'Terminators should say Start or Stop' }; }
+    if (!text) return { err: 'This symbol is empty' };
+    if (n.type === 'sub') return { kind: 'sub' };
+    if (n.type === 'dec') return { kind: 'cond', ast: parseExpr(tokenize(text)) };
+    if (n.type === 'io') {
+      if (IN_RE.test(text)) {
+        var names = text.replace(IN_RE, '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!names.length || names.some(function (x) { return !NAME_RE.test(x); })) return { err: 'Write INPUT followed by a variable name, e.g. INPUT age' };
+        return { kind: 'input', names: names };
+      }
+      if (OUT_RE.test(text)) {
+        var rest = text.replace(OUT_RE, '').trim();
+        if (!rest) return { err: 'Write OUTPUT followed by what to show, e.g. OUTPUT total' };
+        return { kind: 'output', exprs: splitTop(rest).map(function (p) { return parseExpr(tokenize(p)); }) };
+      }
+      return { err: 'Input/output boxes must start with INPUT or OUTPUT' };
+    }
+    if (IN_RE.test(text) || OUT_RE.test(text)) return { err: 'INPUT and OUTPUT go in a parallelogram (input/output symbol), not a process box' };
+    var toks = tokenize(text);
+    if (toks.length >= 3 && toks[0].t === 'id' && toks[1].t === 'op' && ['←', '<-', '=', ':='].indexOf(toks[1].v) >= 0)
+      return { kind: 'assign', name: toks[0].v, ast: parseExpr(toks.slice(2)) };
+    return { err: 'A process box should be an assignment, e.g. total ← total + 1' };
+  } catch (e) { return { err: e && e.msg ? e.msg : String(e) }; }
+}
+
+/* ---------- running a chart ---------- */
+function normLabel(l) {
+  var s = String(l || '').trim().toLowerCase();
+  if (['yes', 'y', 'true', 't'].indexOf(s) >= 0) return 'yes';
+  if (['no', 'n', 'false', 'f'].indexOf(s) >= 0) return 'no';
+  return '';
+}
+function convertInput(raw) {
+  if (typeof raw === 'number') return raw;
+  var s = String(raw).trim();
+  return /^-?\d+(\.\d+)?$/.test(s) ? parseFloat(s) : s;
+}
+function Runner(chart, inputs) {
+  this.chart = chart; this.queue = (inputs || []).slice(); this.vars = {}; this.out = []; this.steps = 0;
+  this.status = 'ready'; this.err = null; this.cur = null; this.last = null; this.lastEdge = null;
+  this.pending = null; this.waitFor = null; this.consumed = 0; this.visits = {};
+  var starts = chart.nodes.filter(function (n) { return n.type === 'term' && termRole(n) === 'start'; });
+  if (starts.length !== 1) { this.status = 'error'; this.err = { node: null, msg: starts.length ? 'There is more than one Start' : 'There is no Start terminator' }; }
+  else this.cur = starts[0].id;
+}
+Runner.prototype.failAt = function (id, msg) { this.status = 'error'; this.err = { node: id, msg: msg }; };
+Runner.prototype.provide = function (raw) { this.queue.push(raw); if (this.status === 'waiting') this.status = 'running'; };
+Runner.prototype.step = function () {
+  if (this.status === 'done' || this.status === 'error' || this.status === 'loop') return;
+  if (this.status === 'waiting' && !this.queue.length) return;
+  if (this.steps >= MAXSTEPS) { this.status = 'loop'; this.err = { node: this.cur, msg: 'Still going after ' + MAXSTEPS + ' steps. This looks like an infinite loop' }; return; }
+  var n = byId(this.chart, this.cur), c = compileNode(n);
+  this.last = n.id;
+  if (c.err) { this.failAt(n.id, c.err); return; }
+  this.status = 'running';
+  try {
+    if (c.kind === 'input') {
+      this.pending = this.pending || c.names.slice();
+      while (this.pending.length) {
+        if (!this.queue.length) { this.status = 'waiting'; this.waitFor = this.pending[0]; return; }
+        this.vars[this.pending.shift()] = convertInput(this.queue.shift()); this.consumed++;
+      }
+      this.pending = null; this.waitFor = null;
+    } else if (c.kind === 'output') {
+      this.out.push(c.exprs.map(function (e) { return fmt(evalAst(e, this.vars)); }, this).join(' '));
+    } else if (c.kind === 'assign') {
+      this.vars[c.name] = evalAst(c.ast, this.vars);
+    }
+    var res = null;
+    if (c.kind === 'cond') {
+      res = evalAst(c.ast, this.vars);
+      if (typeof res !== 'boolean') throw fail('A decision must be a question with a True/False answer, like n > 5');
+    }
+  } catch (e) { this.failAt(n.id, e && e.msg ? e.msg : String(e)); return; }
+  this.steps++;
+  this.visits[n.id] = (this.visits[n.id] || 0) + 1;
+  if (c.kind === 'end') { this.status = 'done'; this.cur = null; this.lastEdge = null; return; }
+  var outs = outEdges(this.chart, n.id), edge = null;
+  if (c.kind === 'cond') {
+    var want = res ? 'yes' : 'no';
+    var m = outs.filter(function (e) { return normLabel(e.label) === want; });
+    if (m.length !== 1) { this.failAt(n.id, m.length ? 'Two arrows are both labelled ' + (res ? 'Yes' : 'No') : 'The condition is ' + (res ? 'True' : 'False') + ' but there is no arrow labelled ' + (res ? 'Yes' : 'No')); return; }
+    edge = m[0];
+  } else if (outs.length === 0) { this.failAt(n.id, 'Nothing follows this symbol. Draw an arrow out of it'); return; }
+  else if (outs.length > 1) { this.failAt(n.id, 'More than one arrow leaves this symbol, and only a decision can do that'); return; }
+  else edge = outs[0];
+  this.lastEdge = edge.id; this.cur = edge.to;
+};
+function runAll(chart, inputs) {
+  var r = new Runner(chart, inputs);
+  while (r.status === 'ready' || r.status === 'running') r.step();
+  if (r.status === 'waiting') r.status = 'needInput';
+  return r;
+}
+
+/* ---------- structure check ---------- */
+function nodeLabel(n) {
+  var t = String(n.text || '').trim();
+  if (!t) return 'An empty ' + ({ term: 'terminator', proc: 'process', io: 'input/output', dec: 'decision', sub: 'subroutine' }[n.type] || 'symbol');
+  return '“' + (t.length > 26 ? t.slice(0, 25) + '…' : t) + '”';
+}
+function checkChart(chart) {
+  var issues = [];
+  function add(sev, msg, node, edge) { issues.push({ sev: sev, msg: msg, node: node || null, edge: edge || null }); }
+  var starts = chart.nodes.filter(function (n) { return n.type === 'term' && termRole(n) === 'start'; });
+  var ends = chart.nodes.filter(function (n) { return n.type === 'term' && termRole(n) === 'end'; });
+  if (!chart.nodes.length) add('error', 'The canvas is empty. Start with a Start terminator');
+  else {
+    if (starts.length === 0) add('error', 'There is no Start terminator');
+    if (starts.length > 1) starts.forEach(function (s) { add('error', 'There should only be one Start', s.id); });
+    if (ends.length === 0) add('error', 'There is no Stop terminator');
+  }
+  chart.nodes.forEach(function (n) {
+    var c = compileNode(n), lab = nodeLabel(n), outs = outEdges(chart, n.id), ins = inEdges(chart, n.id);
+    if (c.err) add('error', lab + ': ' + c.err, n.id);
+    if (c.kind === 'end') { if (outs.length) add('error', lab + ': nothing should leave Stop', n.id); }
+    else if (n.type === 'dec') {
+      if (outs.length !== 2) add('error', lab + ': a decision needs two arrows out, one labelled Yes and one labelled No', n.id);
+      else if (outs.map(function (e) { return normLabel(e.label); }).sort().join() !== 'no,yes') add('error', lab + ': label one arrow Yes and the other No', n.id);
+    } else {
+      if (outs.length === 0) add('error', lab + ': has no arrow leaving it', n.id);
+      if (outs.length > 1) add('error', lab + ': only a decision can have more than one arrow leaving it', n.id);
+      outs.forEach(function (e) { if (String(e.label || '').trim()) add('warn', lab + ': Yes/No labels belong on decisions only', n.id, e.id); });
+    }
+    if (c.kind === 'start' && ins.length) add('warn', 'Nothing should flow into Start', n.id);
+  });
+  if (starts.length === 1) {
+    var seen = {}, q = [starts[0].id];
+    seen[q[0]] = 1;
+    while (q.length) { var id = q.shift(); outEdges(chart, id).forEach(function (e) { if (!seen[e.to]) { seen[e.to] = 1; q.push(e.to); } }); }
+    chart.nodes.forEach(function (n) { if (!seen[n.id]) add('error', nodeLabel(n) + ' is not connected to the rest of the flowchart', n.id); });
+  }
+  var errors = issues.filter(function (i) { return i.sev === 'error'; }).length;
+  return { issues: issues, errors: errors, ok: errors === 0 };
+}
+
+/* ---------- grading ---------- */
+function normItem(s) {
+  var t = String(s).trim().replace(/\s+/g, ' ').toLowerCase();
+  if (/^-?\d+(\.\d+)?$/.test(t)) t = fmt(parseFloat(t));
+  return t;
+}
+function sameList(a, b) {
+  if (a.length !== b.length) return false;
+  for (var i = 0; i < a.length; i++) if (normItem(a[i]) !== normItem(b[i])) return false;
+  return true;
+}
+function listText(a) { return a.length ? a.map(function (x) { return '“' + x + '”'; }).join(', ') : 'nothing'; }
+function inputsText(inp) { return inp.length ? 'With input ' + inp.map(function (x) { return fmt(x); }).join(', ') : 'When it runs'; }
+function runTest(chart, t) {
+  var r = runAll(chart, t.in), pass = r.status === 'done' && sameList(r.out, t.out), why = '';
+  if (!pass) {
+    if (r.status === 'done') why = inputsText(t.in) + ' it outputs ' + listText(r.out) + ' but it should output ' + listText(t.out) + '.';
+    else if (r.status === 'loop') why = inputsText(t.in) + ' it never finishes (infinite loop).';
+    else if (r.status === 'needInput') why = inputsText(t.in) + ' it asks for more input than the test supplies.';
+    else why = inputsText(t.in) + ' it stops with a problem: ' + (r.err ? r.err.msg : '') + '.';
+  }
+  return { in: t.in, exp: t.out, got: r.out, status: r.status, err: r.err, pass: pass, why: why };
+}
+function gradeTask(chart, task) {
+  var check = checkChart(chart), res = task.tests.map(function (t) { return runTest(chart, t); });
+  var passed = res.filter(function (x) { return x.pass; }).length;
+  return { check: check, tests: res, passed: passed, all: passed === res.length && check.ok };
+}
+
+/* ---------- layout from a structured program ---------- */
+function S(text) { return { k: 'p', text: text }; }
+function I(text) { return { k: 'io', text: text }; }
+function O(text) { return { k: 'io', text: text }; }
+function IF(cond, yes, no) { return { k: 'if', cond: cond, yes: yes || [], no: no || [] }; }
+function W(cond, body) { return { k: 'while', cond: cond, body: body }; }
+function T(text) { return { k: 'term', text: text }; }
+
+function shift(b, dx, dy) { b.nodes.forEach(function (n) { n.x += dx; n.y += dy; }); }
+function layoutSeq(items, ctx) {
+  var B = { nodes: [], edges: [], entry: null, exits: [], L: 0, R: 0, H: 0 }, y = 0, pending = null;
+  items.forEach(function (it) {
+    var b = layoutItem(it, ctx);
+    shift(b, 0, y);
+    if (pending) pending.forEach(function (p) { B.edges.push({ from: p.from, to: b.entry, label: p.label || '', port: p.port }); });
+    else B.entry = b.entry;
+    B.nodes = B.nodes.concat(b.nodes); B.edges = B.edges.concat(b.edges);
+    B.L = Math.max(B.L, b.L); B.R = Math.max(B.R, b.R);
+    pending = b.exits; y += b.H + GAP;
+  });
+  B.H = items.length ? y - GAP : 0; B.exits = pending || [];
+  return B;
+}
+function layoutItem(it, ctx) {
+  if (it.k === 'p' || it.k === 'io' || it.k === 'sub' || it.k === 'term') {
+    var node = { id: 'n' + (++ctx.n), type: it.k === 'p' ? 'proc' : it.k, text: it.text, x: 0, y: 0 }, s = sizeOf(node);
+    node.y = s.h / 2;
+    return { nodes: [node], edges: [], entry: node.id, exits: [{ from: node.id }], L: s.w / 2, R: s.w / 2, H: s.h };
+  }
+  var D = { id: 'n' + (++ctx.n), type: 'dec', text: it.cond, x: 0, y: 0 }, ds = sizeOf(D);
+  D.y = ds.h / 2;
+  var B = { nodes: [D], edges: [], entry: D.id, exits: [], L: ds.w / 2, R: ds.w / 2, H: ds.h };
+  if (it.k === 'while') {
+    var body = layoutSeq(it.body, ctx);
+    shift(body, 0, ds.h + GAP);
+    B.nodes = B.nodes.concat(body.nodes); B.edges = B.edges.concat(body.edges);
+    B.edges.push({ from: D.id, to: body.entry, label: 'Yes', port: 'bottom' });
+    body.exits.forEach(function (x) { B.edges.push({ from: x.from, to: D.id, label: x.label || '', port: x.port }); });
+    B.L = Math.max(ds.w / 2, body.L) + 44; B.R = Math.max(ds.w / 2, body.R) + 44; B.H = ds.h + GAP + body.H;
+    B.exits = [{ from: D.id, label: 'No', port: 'right' }];
+    return B;
+  }
+  var hasY = it.yes.length > 0, hasN = it.no.length > 0;
+  var yes = hasY ? layoutSeq(it.yes, ctx) : null, no = hasN ? layoutSeq(it.no, ctx) : null;
+  var half = ds.w / 2 + 16, xY = -(ds.w / 2 + 28), xN = ds.w / 2 + 28;
+  if (hasY && hasN) { var h2 = Math.max((yes.R + no.L + HGAP) / 2, half); xY = -h2; xN = h2; }
+  else if (hasY) xY = -Math.max(half, yes.R + 10);
+  else if (hasN) xN = Math.max(half, no.L + 10);
+  var top = ds.h + GAP, Hb = 0;
+  if (hasY) {
+    shift(yes, xY, top); B.nodes = B.nodes.concat(yes.nodes); B.edges = B.edges.concat(yes.edges);
+    B.edges.push({ from: D.id, to: yes.entry, label: 'Yes', port: 'left' });
+    B.exits = B.exits.concat(yes.exits); Hb = Math.max(Hb, yes.H); B.L = Math.max(B.L, yes.L - xY);
+  } else { B.exits.push({ from: D.id, label: 'Yes', port: 'left' }); B.L = Math.max(B.L, ds.w / 2 + 32); }
+  if (hasN) {
+    shift(no, xN, top); B.nodes = B.nodes.concat(no.nodes); B.edges = B.edges.concat(no.edges);
+    B.edges.push({ from: D.id, to: no.entry, label: 'No', port: 'right' });
+    B.exits = B.exits.concat(no.exits); Hb = Math.max(Hb, no.H); B.R = Math.max(B.R, no.R + xN);
+  } else { B.exits.push({ from: D.id, label: 'No', port: 'right' }); B.R = Math.max(B.R, ds.w / 2 + 32); }
+  B.H = ds.h + GAP + Hb;
+  return B;
+}
+function buildChart(ast) {
+  var ctx = { n: 0 }, B = layoutSeq([T('Start')].concat(ast, [T('Stop')]), ctx), chart = { nodes: B.nodes, edges: B.edges };
+  var minL = Infinity;
+  chart.nodes.forEach(function (n) { minL = Math.min(minL, n.x - sizeOf(n).w / 2); });
+  chart.nodes.forEach(function (n) { n.x = Math.round(n.x - minL + 70); n.y = Math.round(n.y + 36); });
+  chart.edges.forEach(function (e, i) { e.id = 'e' + (i + 1); });
+  chart.nid = ctx.n + 1; chart.eid = chart.edges.length + 1;
+  return chart;
+}
+function chartBounds(chart) {
+  var b = { l: Infinity, t: Infinity, r: -Infinity, b: -Infinity };
+  chart.nodes.forEach(function (n) { var x = nodeBox(n); b.l = Math.min(b.l, x.l); b.t = Math.min(b.t, x.t); b.r = Math.max(b.r, x.r); b.b = Math.max(b.b, x.b); });
+  if (!chart.nodes.length) b = { l: 0, t: 0, r: 0, b: 0 };
+  return b;
+}
+
+/* ---------- routing arrows ---------- */
+function assignPorts(chart, boxes) {
+  var ports = {}, by = {};
+  chart.edges.forEach(function (e) { (by[e.from] = by[e.from] || []).push(e); });
+  Object.keys(by).forEach(function (id) {
+    var src = byId(chart, id), list = by[id];
+    if (!src) return;
+    if (src.type !== 'dec') { list.forEach(function (e) { ports[e.id] = e.port || 'bottom'; }); return; }
+    var used = {};
+    list.forEach(function (e) { if (e.port) { ports[e.id] = e.port; used[e.port] = 1; } });
+    list.forEach(function (e) {
+      if (ports[e.id]) return;
+      var t = boxes[e.to], s = boxes[id];
+      if (!t || !s) return;
+      var dx = t.cx - s.cx, pref = (Math.abs(dx) < 30 && t.t > s.cy + 8) ? 'bottom' : (dx < 0 ? 'left' : 'right');
+      var order = pref === 'bottom' ? ['bottom', 'left', 'right'] : pref === 'left' ? ['left', 'bottom', 'right'] : ['right', 'bottom', 'left'];
+      for (var i = 0; i < order.length; i++) if (!used[order[i]]) { ports[e.id] = order[i]; used[order[i]] = 1; break; }
+      if (!ports[e.id]) ports[e.id] = pref;
+    });
+  });
+  return ports;
+}
+function spanX(boxes, y1, y2, dir, include) {
+  var v = dir < 0 ? Infinity : -Infinity;
+  Object.keys(boxes).forEach(function (k) {
+    var b = boxes[k];
+    if (b.b > y1 && b.t < y2) v = dir < 0 ? Math.min(v, b.l) : Math.max(v, b.r);
+  });
+  include.forEach(function (b) { v = dir < 0 ? Math.min(v, b.l) : Math.max(v, b.r); });
+  return v;
+}
+function bump(used, ox, dir, y1, y2) {
+  var lo = Math.min(y1, y2), hi = Math.max(y1, y2), moved = true, guard = 0;
+  while (moved && guard++ < 8) {
+    moved = false;
+    for (var i = 0; i < used.length; i++) {
+      var u = used[i];
+      if (Math.abs(u.x - ox) < 14 && u.y2 > lo && u.y1 < hi) { ox += dir * 18; moved = true; }
+    }
+  }
+  return ox;
+}
+function routeEdge(e, port, boxes, used) {
+  var s = boxes[e.from], t = boxes[e.to], sx, sy, pts, ym, ox;
+  if (port === 'left') { sx = s.l; sy = s.cy; } else if (port === 'right') { sx = s.r; sy = s.cy; } else { sx = s.cx; sy = s.b; }
+  var tTop = t.t, forward = port === 'bottom' ? tTop >= sy + 14 : tTop > s.cy + 6;
+  if (forward) {
+    if (port === 'bottom') {
+      if (Math.abs(sx - t.cx) < 1) pts = [[sx, sy], [t.cx, tTop]];
+      else { ym = (tTop - sy >= 38) ? tTop - 20 : (sy + tTop) / 2; pts = [[sx, sy], [sx, ym], [t.cx, ym], [t.cx, tTop]]; }
+    } else {
+      var dir = port === 'left' ? -1 : 1, proper = dir < 0 ? t.cx < sx - 6 : t.cx > sx + 6;
+      if (proper) pts = [[sx, sy], [t.cx, sy], [t.cx, tTop]];
+      else {
+        ox = bump(used, spanX(boxes, sy, tTop, dir, [s]) + dir * 22, dir, sy, tTop);
+        ym = tTop - 20; if (ym <= sy + 6) ym = (sy + tTop) / 2;
+        pts = [[sx, sy], [ox, sy], [ox, ym], [t.cx, ym], [t.cx, tTop]];
+      }
+    }
+  } else {
+    var side = port === 'right' ? 1 : -1, y2 = (port === 'bottom' ? sy + 20 : sy);
+    ox = bump(used, spanX(boxes, Math.min(t.cy, y2) - 4, Math.max(t.cy, y2) + 4, side, [s, t]) + side * 34, side, t.cy, y2);
+    var entry = side < 0 ? [t.l, t.cy] : [t.r, t.cy];
+    pts = port === 'bottom' ? [[sx, sy], [sx, sy + 20], [ox, sy + 20], [ox, t.cy], entry] : [[sx, sy], [ox, sy], [ox, t.cy], entry];
+  }
+  for (var q = 0; q < pts.length - 1; q++) if (pts[q][0] === pts[q + 1][0]) used.push({ x: pts[q][0], y1: Math.min(pts[q][1], pts[q + 1][1]), y2: Math.max(pts[q][1], pts[q + 1][1]) });
+  var lab = port === 'bottom' ? { x: sx + 8, y: sy + 16, a: 'start' } : port === 'left' ? { x: sx - 8, y: sy - 8, a: 'end' } : { x: sx + 8, y: sy - 8, a: 'start' };
+  return { pts: pts, label: lab, port: port };
+}
+function routeAll(chart) {
+  var boxes = boxesOf(chart), ports = assignPorts(chart, boxes), out = {}, used = [];
+  chart.edges.forEach(function (e) { if (boxes[e.from] && boxes[e.to]) out[e.id] = routeEdge(e, ports[e.id] || 'bottom', boxes, used); });
+  return out;
+}
+
+/* ---------- task bank ---------- */
+function tt(inp, out) { return { in: inp, out: out }; }
+var NAMES = ['Sam', 'Amira', 'Jo', 'Layla', 'Omar', 'Priya', 'Zain', 'Maya'];
+var TASKS = [
+  { id: 'double', level: 'easy', title: 'Double it', brief: 'Ask the user for a number, then output that number multiplied by 2.',
+    hint: 'Three symbols between Start and Stop would do it: an input, then an output that can do the sum itself.',
+    tests: [tt([4], ['8']), tt([0], ['0']), tt([7], ['14']), tt([-3], ['-6'])], gen: function () { return [rnd(2, 25)]; },
+    model: [I('INPUT n'), O('OUTPUT n * 2')] },
+  { id: 'hello', level: 'easy', title: 'Say hello', brief: 'Ask the user for their name, then output the word Hello followed by their name (for example: Hello Sam).',
+    hint: 'Text goes in quote marks, but a variable name does not. OUTPUT can show several things if you separate them with commas.',
+    tests: [tt(['Sam'], ['Hello Sam']), tt(['Amira'], ['Hello Amira'])], gen: function () { return [pick(NAMES)]; },
+    model: [I('INPUT name'), O('OUTPUT "Hello", name')] },
+  { id: 'area', level: 'easy', title: 'Area of a rectangle', brief: 'Input the width, then input the height. Output the area of the rectangle (width × height).',
+    hint: 'Use two separate INPUT steps with different variable names.',
+    tests: [tt([3, 4], ['12']), tt([10, 2], ['20']), tt([1, 1], ['1'])], gen: function () { return [rnd(2, 9), rnd(2, 9)]; },
+    model: [I('INPUT width'), I('INPUT height'), O('OUTPUT width * height')] },
+  { id: 'passfail', level: 'easy', title: 'Pass or fail', brief: 'Input a test mark. If the mark is 50 or more, output Pass. Otherwise output Fail.',
+    hint: 'A decision gives you a Yes arrow and a No arrow. Each leads to its own output. Think about whether exactly 50 is a pass.',
+    tests: [tt([50], ['Pass']), tt([49], ['Fail']), tt([100], ['Pass']), tt([0], ['Fail'])], gen: function () { return [rnd(20, 95)]; },
+    model: [I('INPUT mark'), IF('mark >= 50', [O('OUTPUT "Pass"')], [O('OUTPUT "Fail"')])] },
+  { id: 'evenodd', level: 'easy', title: 'Even or odd', brief: 'Input a whole number. Output Even if it is even, or Odd if it is odd.',
+    hint: 'A number is even when dividing it by 2 leaves nothing over. The MOD operator gives the remainder, so n MOD 2 = 0 is a handy test.',
+    tests: [tt([4], ['Even']), tt([7], ['Odd']), tt([0], ['Even']), tt([13], ['Odd'])], gen: function () { return [rnd(1, 60)]; },
+    model: [I('INPUT n'), IF('n MOD 2 = 0', [O('OUTPUT "Even"')], [O('OUTPUT "Odd"')])] },
+  { id: 'bigger', level: 'easy', title: 'Bigger number', brief: 'Input two numbers. Output the larger of the two. If they are equal, output either one.',
+    hint: 'Compare the two variables in the decision, such as a > b.',
+    tests: [tt([5, 3], ['5']), tt([2, 9], ['9']), tt([4, 4], ['4'])], gen: function () { return [rnd(1, 20), rnd(1, 20)]; },
+    model: [I('INPUT a'), I('INPUT b'), IF('a > b', [O('OUTPUT a')], [O('OUTPUT b')])] },
+  { id: 'count5', level: 'medium', title: 'Count to 5', brief: 'Output the numbers 1, 2, 3, 4 and 5, one at a time, using a loop.',
+    hint: 'Set a counter to 1 before the loop. Inside the loop, output it and then add 1. The decision checks whether to go round again.',
+    tests: [tt([], ['1', '2', '3', '4', '5'])], gen: null,
+    model: [S('i ← 1'), W('i <= 5', [O('OUTPUT i'), S('i ← i + 1')])] },
+  { id: 'sumto', level: 'medium', title: 'Add up to n', brief: 'Input a number n. Output the total of all the whole numbers from 1 up to n (so for 4 the answer is 1 + 2 + 3 + 4 = 10).',
+    hint: 'You need two variables: a counter and a running total. Both must start with a value before the loop.',
+    tests: [tt([5], ['15']), tt([1], ['1']), tt([10], ['55'])], gen: function () { return [rnd(3, 7)]; },
+    model: [I('INPUT n'), S('total ← 0'), S('i ← 1'), W('i <= n', [S('total ← total + i'), S('i ← i + 1')]), O('OUTPUT total')] },
+  { id: 'times', level: 'medium', title: 'Times table', brief: 'Input a number. Output the first five numbers in its times table (the number × 1, × 2 … up to × 5), one output each.',
+    hint: 'Count from 1 to 5 with a loop, and output the input number multiplied by the counter each time round.',
+    tests: [tt([3], ['3', '6', '9', '12', '15']), tt([7], ['7', '14', '21', '28', '35'])], gen: function () { return [rnd(2, 9)]; },
+    model: [I('INPUT n'), S('i ← 1'), W('i <= 5', [O('OUTPUT n * i'), S('i ← i + 1')])] },
+  { id: 'password', level: 'medium', title: 'Password check', brief: 'Ask the user to enter the password. Keep asking until they type cat. Output Wrong for every incorrect attempt, and Welcome at the end.',
+    hint: 'Take the first guess before the loop. Inside the loop, output Wrong and ask again. Text is compared with = and != and must be in quotes.',
+    tests: [tt(['cat'], ['Welcome']), tt(['dog', 'cat'], ['Wrong', 'Welcome']), tt(['a', 'b', 'cat'], ['Wrong', 'Wrong', 'Welcome'])],
+    gen: function () { var w = ['dog', 'bird', 'fish', 'hat', 'sun'], n = rnd(0, 2), r = []; for (var i = 0; i < n; i++) r.push(pick(w)); r.push('cat'); return r; },
+    model: [I('INPUT guess'), W('guess != "cat"', [O('OUTPUT "Wrong"'), I('INPUT guess')]), O('OUTPUT "Welcome"')] },
+  { id: 'average', level: 'medium', title: 'Average of three', brief: 'Input three numbers. Output their mean average (add them up, then divide by 3).',
+    hint: 'Brackets matter: (a + b + c) / 3. Without them only c gets divided.',
+    tests: [tt([4, 6, 8], ['6']), tt([10, 10, 10], ['10']), tt([1, 2, 3], ['2'])],
+    gen: function () { var m = rnd(3, 15), d = rnd(1, 3); return shuffle([m - d, m, m + d]); },
+    model: [I('INPUT a'), I('INPUT b'), I('INPUT c'), S('average ← (a + b + c) / 3'), O('OUTPUT average')] },
+  { id: 'grade', level: 'medium', title: 'Grade a mark', brief: 'Input a mark. Output A if it is 70 or more, B if it is 50 to 69, or C if it is under 50.',
+    hint: 'Two decisions, one after the other. The No arrow of the first decision leads into the second.',
+    tests: [tt([85], ['A']), tt([70], ['A']), tt([69], ['B']), tt([50], ['B']), tt([49], ['C'])], gen: function () { return [rnd(30, 99)]; },
+    model: [I('INPUT mark'), IF('mark >= 70', [O('OUTPUT "A"')], [IF('mark >= 50', [O('OUTPUT "B"')], [O('OUTPUT "C"')])])] },
+  { id: 'sentinel', level: 'hard', title: 'Running total', brief: 'Keep asking the user for numbers and adding them up. When they enter 0, stop asking and output the total. (The 0 itself is not added.)',
+    hint: 'Input the first number before the loop. In the loop, add it to the total and then input the next one. The decision asks whether the number is not 0.',
+    tests: [tt([5, 10, 0], ['15']), tt([0], ['0']), tt([3, 4, 5, 0], ['12'])],
+    gen: function () { var r = [], n = rnd(2, 4); for (var i = 0; i < n; i++) r.push(rnd(1, 9)); r.push(0); return r; },
+    model: [I('INPUT n'), S('total ← 0'), W('n != 0', [S('total ← total + n'), I('INPUT n')]), O('OUTPUT total')] },
+  { id: 'largest', level: 'hard', title: 'Largest number', brief: 'Input how many numbers there will be. Then input that many numbers (all positive). Output the largest one.',
+    hint: 'Keep a variable called largest, starting at 0. Inside the loop, a decision checks whether the new number beats it. If so, replace it. If not, do nothing.',
+    tests: [tt([3, 4, 9, 2], ['9']), tt([1, 7], ['7']), tt([4, 1, 2, 3, 4], ['4'])],
+    gen: function () { var n = rnd(3, 4), r = [n]; for (var i = 0; i < n; i++) r.push(rnd(1, 20)); return r; },
+    model: [I('INPUT count'), S('largest ← 0'), S('i ← 1'), W('i <= count', [I('INPUT num'), IF('num > largest', [S('largest ← num')], []), S('i ← i + 1')]), O('OUTPUT largest')] },
+  { id: 'prime', level: 'hard', title: 'Prime or not', brief: 'Input a whole number (2 or more). Output Prime if only 1 and itself divide into it, otherwise output Not prime.',
+    hint: 'Try dividing by every number from 2 up to n − 1, using a loop. If n MOD i = 0 for any of them, it is not prime. A flag variable can remember what you found.',
+    tests: [tt([7], ['Prime']), tt([9], ['Not prime']), tt([2], ['Prime']), tt([15], ['Not prime']), tt([13], ['Prime'])],
+    gen: function () { return [pick([2, 3, 5, 7, 9, 11, 12, 13, 15, 17, 21, 23, 25])]; },
+    model: [I('INPUT n'), S('i ← 2'), S('prime ← 1'), W('i < n', [IF('n MOD i = 0', [S('prime ← 0')], []), S('i ← i + 1')]), IF('prime = 1', [O('OUTPUT "Prime"')], [O('OUTPUT "Not prime"')])] },
+  { id: 'factorial', level: 'hard', title: 'Factorial', brief: 'Input a whole number n. Output n factorial: n × (n − 1) × … × 2 × 1. (So 4 factorial is 24, and 1 factorial is 1.)',
+    hint: 'Start the answer at 1. While n is greater than 1, multiply the answer by n and then take 1 off n.',
+    tests: [tt([5], ['120']), tt([1], ['1']), tt([4], ['24']), tt([6], ['720'])], gen: function () { return [rnd(2, 6)]; },
+    model: [I('INPUT n'), S('f ← 1'), W('n > 1', [S('f ← f * n'), S('n ← n - 1')]), O('OUTPUT f')] }
+];
+TASKS.forEach(function (t) { t.chart = null; });
+function taskChart(t) { if (!t.chart) t.chart = buildChart(t.model); return cloneChart(t.chart); }
+function taskById(id) { for (var i = 0; i < TASKS.length; i++) if (TASKS[i].id === id) return TASKS[i]; return TASKS[0]; }
+function tasksFor(level) { return level === 'mixed' ? TASKS.slice() : TASKS.filter(function (t) { return t.level === level; }); }
+
+/* ---------- trace questions ---------- */
+function assignedVars(chart) {
+  var names = [];
+  chart.nodes.forEach(function (n) { if (n.type === 'proc') { var c = compileNode(n); if (c.kind === 'assign' && names.indexOf(c.name) < 0) names.push(c.name); } });
+  return names;
+}
+function makeTraceQuestion(level, avoidId) {
+  var pool = tasksFor(level).filter(function (t) { return t.gen; });
+  var cands = pool.filter(function (t) { return t.id !== avoidId; });
+  var task = pick(cands.length ? cands : pool), chart = taskChart(task), inputs = task.gen(), r = runAll(chart, inputs);
+  var vars = assignedVars(chart), useVar = vars.length && Math.random() < 0.4, name = useVar ? pick(vars) : null;
+  var q = { task: task, chart: chart, inputs: inputs, type: useVar ? 'var' : 'out', varName: name };
+  q.answer = useVar ? [fmt(r.vars[name])] : r.out.slice();
+  return q;
+}
+function parseAnswerList(text, expectedLen) {
+  var s = String(text || '').trim();
+  if (!s) return [];
+  var parts = s.split(/[,;\n]+/).map(function (x) { return x.trim(); }).filter(Boolean);
+  if (parts.length === 1 && expectedLen > 1) parts = s.split(/\s+/);
+  return parts;
+}
+function checkTraceAnswer(q, text) { return sameList(parseAnswerList(text, q.answer.length), q.answer); }
+
+/* ---------- spot-the-error mutations ---------- */
+var OPFLIP = { '>=': '>', '>': '>=', '<=': '<', '<': '<=', '!=': '=', '=': '!=' };
+function firstFailing(chart, task) {
+  for (var i = 0; i < task.tests.length; i++) { var r = runTest(chart, task.tests[i]); if (!r.pass) return r; }
+  return null;
+}
+function mutateChart(task) {
+  var logic = shuffle(['cond', 'swap', 'calc']), shapes = shuffle(['shape', 'shape2']);
+  var kinds = Math.random() < 0.72 ? logic.concat(shapes) : shapes.concat(logic);
+  for (var k = 0; k < kinds.length; k++) {
+    var base = taskChart(task), kind = kinds[k], ns = shuffle(base.nodes);
+    for (var i = 0; i < ns.length; i++) {
+      var n = ns[i], m = cloneChart(base), mn = byId(m, n.id), res = null;
+      if (kind === 'cond' && n.type === 'dec') {
+        var mm = /(>=|<=|!=|>|<|=)/.exec(n.text);
+        if (mm) {
+          mn.text = n.text.replace(mm[1], OPFLIP[mm[1]]);
+          var f = firstFailing(m, task);
+          if (f) res = { kind: kind, faulty: n.id, symptom: f.why, explain: 'The condition should be “' + n.text + '”, not “' + mn.text + '”. ' + ((mm[1] === '>' || mm[1] === '>=' || mm[1] === '<' || mm[1] === '<=') ? 'Whether the comparison includes “equal to” decides what happens at the boundary value.' : 'That sends the Yes and No paths the wrong way round.') };
+        }
+      } else if (kind === 'swap' && n.type === 'dec') {
+        var es = outEdges(m, n.id);
+        if (es.length === 2) {
+          var a = es[0].label; es[0].label = es[1].label; es[1].label = a;
+          var f2 = firstFailing(m, task);
+          if (f2) res = { kind: kind, faulty: n.id, symptom: f2.why, explain: 'The Yes and No arrows leaving “' + n.text + '” are the wrong way round. Yes should lead to the action for when the condition is true.' };
+        }
+      } else if (kind === 'shape' && n.type === 'io') {
+        mn.type = 'proc';
+        res = { kind: kind, faulty: n.id, symptom: 'The flowchart gives the right answers, but one symbol is drawn with the wrong shape.', explain: '“' + n.text + '” is an input/output step, so it needs a parallelogram, not a rectangle.' };
+      } else if (kind === 'shape2' && n.type === 'proc') {
+        mn.type = 'io';
+        res = { kind: kind, faulty: n.id, symptom: 'The flowchart gives the right answers, but one symbol is drawn with the wrong shape.', explain: '“' + n.text + '” is a calculation (a process), so it belongs in a rectangle, not a parallelogram.' };
+      } else if (kind === 'calc' && n.type === 'proc') {
+        var t = n.text, nt = null;
+        if (/ \+ /.test(t)) nt = t.replace(' + ', ' - ');
+        else if (/ \* /.test(t)) nt = t.replace(' * ', ' + ');
+        else if (/ - /.test(t)) nt = t.replace(' - ', ' + ');
+        else if (/← 0$/.test(t)) nt = t.replace(/0$/, '1');
+        else if (/← 1$/.test(t)) nt = t.replace(/1$/, '0');
+        if (nt) {
+          mn.text = nt;
+          var f3 = firstFailing(m, task);
+          if (f3) res = { kind: kind, faulty: n.id, symptom: f3.why, explain: 'This should say “' + t + '”, not “' + nt + '”. Try tracing a small input through the flowchart to see where the numbers go wrong.' };
+        }
+      }
+      if (res) { res.chart = m; res.task = task; return res; }
+    }
+  }
+  return null;
+}
+function makeSpotQuestion(level, avoidId) {
+  var pool = tasksFor(level), cands = pool.filter(function (t) { return t.id !== avoidId; });
+  for (var tries = 0; tries < 12; tries++) {
+    var q = mutateChart(pick(cands.length ? cands : pool));
+    if (q) return q;
+  }
+  return null;
+}
+// ==ENGINE-END==
+
+(function () {
+'use strict';
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function load(k) { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* best effort */ } }
+
+var MODES = [{ id: 'build', label: 'Build' }, { id: 'trace', label: 'Trace' }, { id: 'spot', label: 'Spot error' }, { id: 'sandbox', label: 'Sandbox' }];
+var LEVELS = [{ id: 'easy', label: 'Easy' }, { id: 'medium', label: 'Medium' }, { id: 'hard', label: 'Hard' }, { id: 'mixed', label: 'Mixed' }];
+var NOTES = {
+  build: 'Build the flowchart for the task, then check it against test cases. Your work is saved on this device.',
+  trace: 'Follow the flowchart with the inputs given and say what it outputs.',
+  spot: 'There is a mistake somewhere in the flowchart. Click the symbol that is wrong.',
+  sandbox: 'Draw anything you like, then run it step by step.'
+};
+var PLACEHOLDER = { term: 'Start / Stop', proc: 'process', io: 'INPUT / OUTPUT', dec: 'condition?', sub: 'subroutine' };
+var TYPE_LABEL = { term: 'Start / Stop', proc: 'Process', io: 'Input / output', dec: 'Decision', sub: 'Subroutine' };
+var TYPE_HINT = {
+  proc: 'A calculation or assignment, like total ← total + n. Type <- to get ←.',
+  io: 'Start with INPUT or OUTPUT, like INPUT age or OUTPUT "Hello", name.',
+  dec: 'A condition with a Yes/No answer, like age >= 18 or n MOD 2 = 0.',
+  sub: 'A call to a subroutine. The simulator skips these.',
+  term: 'Every flowchart begins with Start and finishes with Stop.'
+};
+
+var K_SET = 'flowline-settings-v1', K_STATS = 'flowline-stats-v1', K_WORK = 'flowline-work-v1', K_SOLVED = 'flowline-solved-v1';
+var settings = Object.assign({ mode: 'build', level: 'easy', task: 'double' }, load(K_SET) || {});
+var stats = Object.assign({ streak: 0, best: 0, answered: 0, correct: 0 }, load(K_STATS) || {});
+var solved = load(K_SOLVED) || {};
+var work = load(K_WORK) || {};
+if (!MODES.some(function (m) { return m.id === settings.mode; })) settings.mode = 'build';
+if (!LEVELS.some(function (m) { return m.id === settings.level; })) settings.level = 'easy';
+
+var ST = { chart: null, model: null, view: 'mine', sel: null, hist: [], fut: [], conn: null, results: null, marks: {}, hl: null, run: null, play: null,
+  q: null, answered: false, picked: null, hint: false, drag: null, tmp: null, runFixed: null, stepper: false, clearArm: false, qText: '' };
+
+/* ---------- chart helpers ---------- */
+function starterChart() { return { nodes: [{ id: 'n1', type: 'term', text: 'Start', x: 320, y: 50 }], edges: [], nid: 2, eid: 1 }; }
+function snap() { return JSON.stringify(ST.chart); }
+function chartKey() { return settings.mode === 'sandbox' ? 'sandbox' : settings.task; }
+function loadWork() { var w = work[chartKey()]; return w && w.nodes ? w : starterChart(); }
+var saveT = null;
+function persistWork() {
+  if (settings.mode !== 'build' && settings.mode !== 'sandbox') return;
+  clearTimeout(saveT);
+  saveT = setTimeout(function () { work[chartKey()] = ST.chart; save(K_WORK, work); }, 250);
+}
+function current() { return ST.view === 'model' ? ST.model : (settings.mode === 'trace' || settings.mode === 'spot') ? (ST.q ? ST.q.chart : { nodes: [], edges: [] }) : ST.chart; }
+function editable() { return (settings.mode === 'build' || settings.mode === 'sandbox') && ST.view === 'mine'; }
+function task() { return taskById(settings.task); }
+function pool() { return tasksFor(settings.level); }
+function pushHist(s) { ST.hist.push(s || snap()); if (ST.hist.length > 60) ST.hist.shift(); ST.fut = []; }
+function changed() { ST.results = null; ST.marks = {}; resetRun(true); persistWork(); }
+function maxOut(n) { return n.type === 'dec' ? 2 : (n.type === 'term' && termRole(n) === 'end') ? 0 : 1; }
+function toast(msg, bad) {
+  var t = $('toast'); t.textContent = msg; t.hidden = false; t.className = 'toast' + (bad ? ' bad' : '');
+  clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3200);
+}
+
+/* ---------- drawing ---------- */
+var CHART_CSS =
+  '.nd{fill:var(--panel);stroke:var(--ink-dim);stroke-width:2;stroke-linejoin:round}.sl{stroke:var(--ink-dim);stroke-width:2}' +
+  '.nodeg{touch-action:none}.edit .nodeg{cursor:grab}.pick .nodeg{cursor:pointer}.pick .nodeg:hover .nd{stroke:var(--pc)}' +
+  '.nodeg.vis .nd{fill:var(--panel-2)}.nodeg.sel .nd{stroke:var(--pc);stroke-width:3.5}' +
+  '.nodeg.cur .nd{fill:var(--pc-wash);stroke:var(--pc);stroke-width:3.5}.nodeg.bad .nd{stroke:var(--bad);stroke-width:3.5}' +
+  '.nodeg.ok .nd{stroke:var(--ok);fill:var(--ok-wash);stroke-width:3.5}.nodeg.wrong .nd{stroke:var(--bad);fill:var(--bad-wash);stroke-width:3.5}' +
+  '.t{font:500 13px var(--mono);fill:var(--ink);text-anchor:middle}.t.ph{fill:var(--ink-faint);font-style:italic;font-family:var(--sans)}' +
+  '.ed{fill:none;stroke:var(--ink-dim);stroke-width:2}.ed.hot{stroke:var(--pc);stroke-width:3.5}.ed.sel{stroke:var(--kw);stroke-width:3.5}' +
+  '.ed-hit{fill:none;stroke:transparent;stroke-width:16;pointer-events:stroke}.edit .ed-hit{cursor:pointer}' +
+  '.lab{font:700 12px var(--mono);fill:var(--ink);paint-order:stroke;stroke:var(--panel-2);stroke-width:4px;stroke-linejoin:round}' +
+  '.handle circle{fill:var(--pc);stroke:var(--panel);stroke-width:2;cursor:crosshair}.handle line{stroke:var(--pc);stroke-width:2}.handle text{font:700 14px var(--sans);fill:var(--on-pc);text-anchor:middle;pointer-events:none}' +
+  '.tmp{fill:none;stroke:var(--pc);stroke-width:2.5;stroke-dasharray:6 5;pointer-events:none}.grid-dot{fill:var(--line-strong)}';
+(function () { var s = document.createElement('style'); s.textContent = CHART_CSS; document.head.appendChild(s); })();
+
+function ensureSvg() {
+  var host = $('chartHost'), svg = host.querySelector('svg');
+  if (svg) return svg;
+  host.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Flowchart"><defs>' +
+    '<marker id="fc-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--ink-dim)"/></marker>' +
+    '<marker id="fc-arrH" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--pc)"/></marker>' +
+    '<marker id="fc-arrS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--kw)"/></marker>' +
+    '<pattern id="fc-grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle class="grid-dot" cx="10" cy="10" r="1"/></pattern></defs><g id="lay"></g></svg>';
+  return host.querySelector('svg');
+}
+function pathD(pts) {
+  var d = 'M' + pts[0][0] + ' ' + pts[0][1];
+  function toward(a, b, r) { var dx = b[0] - a[0], dy = b[1] - a[1], l = Math.sqrt(dx * dx + dy * dy) || 1; return [a[0] + dx / l * r, a[1] + dy / l * r]; }
+  function dist(a, b) { return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]); }
+  for (var i = 1; i < pts.length - 1; i++) {
+    var r = Math.min(9, dist(pts[i - 1], pts[i]) / 2, dist(pts[i], pts[i + 1]) / 2), a = toward(pts[i], pts[i - 1], r), b = toward(pts[i], pts[i + 1], r);
+    d += ' L' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' Q' + pts[i][0] + ' ' + pts[i][1] + ' ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1);
+  }
+  var l = pts[pts.length - 1];
+  return d + ' L' + l[0] + ' ' + l[1];
+}
+function nodeSVG(n, cls, attrs) {
+  var s = sizeOf(n), w = s.w, h = s.h, x = n.x, y = n.y, L = x - w / 2, R = x + w / 2, T = y - h / 2, B = y + h / 2, shape = '';
+  if (n.type === 'term') shape = '<rect class="nd" x="' + L + '" y="' + T + '" width="' + w + '" height="' + h + '" rx="' + h / 2 + '"/>';
+  else if (n.type === 'io') shape = '<polygon class="nd" points="' + (L + 14) + ',' + T + ' ' + R + ',' + T + ' ' + (R - 14) + ',' + B + ' ' + L + ',' + B + '"/>';
+  else if (n.type === 'dec') shape = '<polygon class="nd" points="' + x + ',' + T + ' ' + R + ',' + y + ' ' + x + ',' + B + ' ' + L + ',' + y + '"/>';
+  else if (n.type === 'sub') shape = '<rect class="nd" x="' + L + '" y="' + T + '" width="' + w + '" height="' + h + '" rx="3"/><line class="sl" x1="' + (L + 11) + '" y1="' + T + '" x2="' + (L + 11) + '" y2="' + B + '"/><line class="sl" x1="' + (R - 11) + '" y1="' + T + '" x2="' + (R - 11) + '" y2="' + B + '"/>';
+  else shape = '<rect class="nd" x="' + L + '" y="' + T + '" width="' + w + '" height="' + h + '" rx="3"/>';
+  var txt = '', empty = !String(n.text || '').trim(), lines = empty ? [PLACEHOLDER[n.type]] : s.lines, lh = 17;
+  lines.forEach(function (ln, i) { txt += '<text class="t' + (empty ? ' ph' : '') + '" x="' + x + '" y="' + (y - (lines.length - 1) * lh / 2 + i * lh + 4.5) + '">' + esc(ln) + '</text>'; });
+  return '<g class="nodeg ' + cls + '" ' + attrs + '>' + shape + txt + '</g>';
+}
+var drawQ = false;
+function drawChart() { if (drawQ) return; drawQ = true; requestAnimationFrame(function () { drawQ = false; drawNow(); }); }
+function chartMarkup(chart, o) {
+  var routes = routeAll(chart), boxes = boxesOf(chart), b = chartBounds(chart), i;
+  chart.edges.forEach(function (e) { var r = routes[e.id]; if (r) r.pts.forEach(function (p) { b.l = Math.min(b.l, p[0]); b.r = Math.max(b.r, p[0]); b.t = Math.min(b.t, p[1]); b.b = Math.max(b.b, p[1]); }); });
+  if (!chart.nodes.length) b = { l: 0, t: 0, r: 0, b: 0 };
+  var vb;
+  if (o.edit) vb = [0, 0, Math.max(640, b.r + 170), Math.max(520, b.b + 150)];
+  else vb = [b.l - 30, b.t - 26, b.r - b.l + 60, b.b - b.t + 52];
+  var hl = o.hl || {}, g = '';
+  chart.edges.forEach(function (e) {
+    var r = routes[e.id]; if (!r) return;
+    var hot = hl.edge === e.id, sel = o.sel && o.sel.type === 'edge' && o.sel.id === e.id;
+    var d = pathD(r.pts), cls = 'ed' + (hot ? ' hot' : '') + (sel ? ' sel' : '');
+    g += '<g class="edge" data-edge="' + e.id + '"><path class="ed-hit" d="' + d + '"/><path class="' + cls + '" d="' + d + '" marker-end="url(#' + (sel ? 'fc-arrS' : hot ? 'fc-arrH' : 'fc-arr') + ')"/>' +
+      (String(e.label || '').trim() ? '<text class="lab" x="' + r.label.x + '" y="' + r.label.y + '" text-anchor="' + r.label.a + '">' + esc(e.label) + '</text>' : '') + '</g>';
+  });
+  chart.nodes.forEach(function (n) {
+    var cls = '';
+    if (hl.vis && hl.vis[n.id]) cls += ' vis';
+    if (hl.cur === n.id) cls += ' cur';
+    if (o.sel && o.sel.type === 'node' && o.sel.id === n.id) cls += ' sel';
+    if (o.marks && o.marks[n.id]) cls += ' ' + o.marks[n.id];
+    g += nodeSVG(n, cls, 'data-node="' + n.id + '"');
+  });
+  if (o.handle) {
+    var hb = boxes[o.handle];
+    if (hb) g += '<g class="handle" data-handle="' + o.handle + '"><line x1="' + hb.cx + '" y1="' + hb.b + '" x2="' + hb.cx + '" y2="' + (hb.b + 10) + '"/><circle cx="' + hb.cx + '" cy="' + (hb.b + 18) + '" r="10"/><text x="' + hb.cx + '" y="' + (hb.b + 23) + '">→</text></g>';
+  }
+  if (o.tmp) g += '<path class="tmp" d="M' + o.tmp.x1 + ' ' + o.tmp.y1 + ' L' + o.tmp.x2 + ' ' + o.tmp.y2 + '"/>';
+  return { g: g, vb: vb };
+}
+function drawNow() {
+  var svg = ensureSvg(), chart = current(), ed = editable(), sel = ST.sel, handle = null;
+  if (ed && sel && sel.type === 'node') { var sn = byId(chart, sel.id); if (sn && outEdges(chart, sn.id).length < maxOut(sn) && !ST.conn) handle = sel.id; }
+  var marks = Object.assign({}, ST.marks);
+  if (ST.run && ST.run.status === 'error' && ST.run.err && ST.run.err.node) marks[ST.run.err.node] = 'bad';
+  var m = chartMarkup(chart, { edit: ed, sel: ed ? sel : null, hl: ST.hl, marks: marks, handle: ed ? handle : null, tmp: ST.tmp });
+  svg.setAttribute('viewBox', m.vb.join(' '));
+  svg.setAttribute('class', ed ? 'fc edit' : (settings.mode === 'spot' ? 'fc pick' : 'fc'));
+  if (!ed) svg.style.maxWidth = Math.round(m.vb[2] * 1.15) + 'px'; else svg.style.maxWidth = '';
+  var lay = svg.querySelector('#lay');
+  lay.innerHTML = (ed ? '<rect x="0" y="0" width="' + m.vb[2] + '" height="' + m.vb[3] + '" fill="url(#fc-grid)"/>' : '') + m.g;
+  $('footMsg').textContent = !chart.nodes.length ? 'Add a Start symbol from the toolbar above' : '';
+}
+function svgPoint(svg, e) {
+  var p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  var m = svg.getScreenCTM();
+  return m ? p.matrixTransform(m.inverse()) : { x: 0, y: 0 };
+}
+
+/* ---------- editing ---------- */
+function collides(c, box, ignore) {
+  return c.nodes.some(function (n) { if (n.id === ignore) return false; var b = nodeBox(n); return box.l < b.r + 14 && box.r > b.l - 14 && box.t < b.b + 14 && box.b > b.t - 14; });
+}
+function placeNew(n, selNode) {
+  var c = ST.chart, s = sizeOf(n), spots = [];
+  if (selNode) {
+    var b = nodeBox(selNode);
+    spots.push([selNode.x, b.b + 46 + s.h / 2]);
+    spots.push([selNode.x + b.w / 2 + s.w / 2 + 50, selNode.y + 70]);
+    spots.push([selNode.x - b.w / 2 - s.w / 2 - 50, selNode.y + 70]);
+    spots.push([selNode.x, b.b + 46 + s.h / 2 + 90]);
+  } else if (!c.nodes.length) spots.push([320, 40 + s.h / 2]);
+  else {
+    var low = c.nodes.reduce(function (a, q) { return nodeBox(q).b > nodeBox(a).b ? q : a; });
+    spots.push([low.x, nodeBox(low).b + 46 + s.h / 2]);
+  }
+  for (var i = 0; i < spots.length; i++) {
+    var x = Math.round(spots[i][0] / 10) * 10, y = Math.round(spots[i][1] / 10) * 10;
+    if (!collides(c, { l: x - s.w / 2, r: x + s.w / 2, t: y - s.h / 2, b: y + s.h / 2 })) { n.x = x; n.y = y; return; }
+  }
+  var f = spots[0], yy = Math.round(f[1] / 10) * 10;
+  while (collides(c, { l: f[0] - s.w / 2, r: f[0] + s.w / 2, t: yy - s.h / 2, b: yy + s.h / 2 })) yy += 30;
+  n.x = Math.round(f[0] / 10) * 10; n.y = yy;
+}
+function addNode(type, text) {
+  if (!editable()) return;
+  pushHist();
+  var c = ST.chart, selNode = ST.sel && ST.sel.type === 'node' ? byId(c, ST.sel.id) : null;
+  var n = { id: 'n' + (c.nid++), type: type, text: text || '', x: 0, y: 0 };
+  placeNew(n, selNode);
+  c.nodes.push(n);
+  var isStart = type === 'term' && /^start/i.test(text);
+  if (selNode && !isStart && outEdges(c, selNode.id).length < maxOut(selNode)) addEdge(selNode.id, n.id, true);
+  ST.sel = { type: 'node', id: n.id };
+  changed(); renderSide(); drawChart();
+  var inp = $('nodeText'); if (inp && type !== 'term') { inp.focus(); }
+}
+function addEdge(from, to, quiet) {
+  var c = ST.chart, s = byId(c, from);
+  if (!s || !byId(c, to)) return false;
+  if (from === to) { if (!quiet) toast('A symbol can’t point at itself', true); return false; }
+  if (c.edges.some(function (e) { return e.from === from && e.to === to; })) { if (!quiet) toast('Those two are already joined', true); return false; }
+  var outs = outEdges(c, from);
+  if (outs.length >= maxOut(s)) {
+    if (!quiet) toast(maxOut(s) === 0 ? 'Nothing leaves Stop' : s.type === 'dec' ? 'A decision only has two arrows out: Yes and No' : 'Only a decision can have two arrows out. Use a decision to branch', true);
+    return false;
+  }
+  var label = '';
+  if (s.type === 'dec') { var used = outs.map(function (e) { return normLabel(e.label); }); label = used.indexOf('yes') < 0 ? 'Yes' : used.indexOf('no') < 0 ? 'No' : ''; }
+  if (!quiet) pushHist();
+  c.edges.push({ id: 'e' + (c.eid++), from: from, to: to, label: label });
+  if (!quiet) { changed(); renderSide(); drawChart(); }
+  return true;
+}
+function deleteSel() {
+  if (!editable() || !ST.sel) return;
+  pushHist();
+  var c = ST.chart;
+  if (ST.sel.type === 'node') { c.nodes = c.nodes.filter(function (n) { return n.id !== ST.sel.id; }); c.edges = c.edges.filter(function (e) { return e.from !== ST.sel.id && e.to !== ST.sel.id; }); }
+  else c.edges = c.edges.filter(function (e) { return e.id !== ST.sel.id; });
+  ST.sel = null; changed(); renderSide(); drawChart();
+}
+function undo() {
+  if (!editable() || !ST.hist.length) return;
+  ST.fut.push(snap()); ST.chart = JSON.parse(ST.hist.pop()); ST.sel = null; changed(); renderSide(); drawChart();
+}
+function redo() {
+  if (!editable() || !ST.fut.length) return;
+  ST.hist.push(snap()); ST.chart = JSON.parse(ST.fut.pop()); ST.sel = null; changed(); renderSide(); drawChart();
+}
+function select(sel) { ST.sel = sel; renderSide(); drawChart(); }
+
+/* pointer handling on the canvas */
+(function () {
+  var host = $('chartHost');
+  host.addEventListener('pointerdown', function (e) {
+    if (!editable()) return;
+    var svg = host.querySelector('svg'), hdl = e.target.closest('[data-handle]'), ng = e.target.closest('[data-node]'), eg = e.target.closest('[data-edge]');
+    var pt = svgPoint(svg, e);
+    if (hdl) {
+      var from = hdl.getAttribute('data-handle'), fb = nodeBox(byId(ST.chart, from));
+      ST.drag = { kind: 'conn', from: from, x1: fb.cx, y1: fb.b + 18 }; ST.tmp = { x1: fb.cx, y1: fb.b + 18, x2: pt.x, y2: pt.y };
+      svg.setPointerCapture(e.pointerId); e.preventDefault(); drawChart(); return;
+    }
+    if (ng) {
+      var id = ng.getAttribute('data-node');
+      if (ST.conn) { connectClick(id); return; }
+      var n = byId(ST.chart, id);
+      ST.drag = { kind: 'move', id: id, ox: pt.x - n.x, oy: pt.y - n.y, moved: false, before: snap(), sx: e.clientX, sy: e.clientY };
+      if (!ST.sel || ST.sel.id !== id) { ST.sel = { type: 'node', id: id }; renderSide(); }
+      svg.setPointerCapture(e.pointerId); e.preventDefault(); drawChart(); return;
+    }
+    if (eg) { select({ type: 'edge', id: eg.getAttribute('data-edge') }); return; }
+    if (ST.conn) { ST.conn = null; syncTools(); }
+    if (ST.sel) select(null);
+  });
+  host.addEventListener('pointermove', function (e) {
+    if (!ST.drag) return;
+    var svg = host.querySelector('svg'), pt = svgPoint(svg, e), d = ST.drag;
+    if (d.kind === 'move') {
+      if (!d.moved && Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) < 4) return;
+      d.moved = true;
+      var n = byId(ST.chart, d.id), s = sizeOf(n);
+      n.x = Math.max(s.w / 2 + 8, Math.round((pt.x - d.ox) / 10) * 10); n.y = Math.max(s.h / 2 + 8, Math.round((pt.y - d.oy) / 10) * 10);
+    } else { ST.tmp = { x1: d.x1, y1: d.y1, x2: pt.x, y2: pt.y }; }
+    drawChart();
+  });
+  function end(e) {
+    var d = ST.drag; if (!d) return;
+    ST.drag = null; ST.tmp = null;
+    if (d.kind === 'move' && d.moved) { pushHist(d.before); changed(); }
+    if (d.kind === 'conn') {
+      var el = document.elementFromPoint(e.clientX, e.clientY), tg = el && el.closest ? el.closest('[data-node]') : null;
+      if (tg) addEdge(d.from, tg.getAttribute('data-node'));
+    }
+    drawChart();
+  }
+  host.addEventListener('pointerup', end);
+  host.addEventListener('pointercancel', end);
+  host.addEventListener('dblclick', function (e) { var ng = e.target.closest('[data-node]'); if (ng && editable()) { var i = $('nodeText'); if (i) { i.focus(); i.select(); } } });
+  host.addEventListener('click', function (e) {
+    if (settings.mode !== 'spot' || ST.answered || !ST.q) return;
+    var ng = e.target.closest('[data-node]'); if (ng) answerSpot(ng.getAttribute('data-node'));
+  });
+})();
+function connectClick(id) {
+  if (!ST.conn.from) { ST.conn.from = id; ST.marks = {}; ST.marks[id] = 'ok'; toast('Now click the symbol it should point to'); drawChart(); return; }
+  var from = ST.conn.from; ST.conn.from = null; ST.marks = {};
+  addEdge(from, id); drawChart();
+}
+function syncTools() {
+  $('connectBtn').setAttribute('aria-pressed', ST.conn ? 'true' : 'false');
+  $('undoBtn').disabled = !ST.hist.length; $('redoBtn').disabled = !ST.fut.length;
+  $('delBtn').disabled = !ST.sel;
+  $('clearBtn').textContent = ST.clearArm ? 'Sure?' : 'Clear';
+}
+
+/* ---------- side panel ---------- */
+function renderSide() {
+  var m = settings.mode, ed = editable();
+  $('palette').hidden = !(m === 'build' || m === 'sandbox') || ST.view !== 'mine';
+  $('secInspect').hidden = !ed;
+  $('secCheck').hidden = !(m === 'build');
+  if (m === 'build') renderTaskCard(); else if (m === 'trace') renderTrace(); else if (m === 'spot') renderSpot(); else renderSandboxCard();
+  if (ed) renderInspector();
+  if (m === 'build') renderResults();
+  var showRun = m === 'sandbox' || m === 'build' || ((m === 'trace' || m === 'spot') && ST.stepper);
+  $('secRun').hidden = !showRun;
+  var fixed = (m === 'trace' || m === 'spot') && ST.q ? ST.q.inputs || [] : null;
+  $('runInRow').hidden = !!fixed || false;
+  if (fixed) ST.runFixed = fixed; else ST.runFixed = null;
+  $('stats').hidden = !(m === 'trace' || m === 'spot');
+  renderStats(); renderRun(); syncTools();
+}
+function renderStats() {
+  $('statStreak').textContent = stats.streak; $('statBest').textContent = stats.best; $('statAnswered').textContent = stats.answered;
+  $('statAcc').textContent = stats.answered ? Math.round(stats.correct / stats.answered * 100) + '%' : '–';
+}
+function renderTaskCard() {
+  var t = task(), p = pool(), done = TASKS.filter(function (x) { return solved[x.id]; }).length;
+  var opts = p.map(function (x, i) { return '<option value="' + x.id + '"' + (x.id === t.id ? ' selected' : '') + '>' + (solved[x.id] ? '✔ ' : '') + esc(x.title) + '</option>'; }).join('');
+  var ex = t.tests.slice(0, 2).map(function (x) { return '<div><b>' + (x.in.length ? 'Input ' + x.in.map(fmt).join(', ') : 'No input') + '</b> → ' + x.out.map(function (o) { return esc(o); }).join(', ') + '</div>'; }).join('');
+  var model = ST.view === 'model';
+  $('secTask').innerHTML =
+    '<div class="eyebrow">Task · ' + done + ' of ' + TASKS.length + ' complete</div>' +
+    '<div class="task-nav" style="margin-top:6px"><button type="button" class="ghost sm" data-act="prevtask" aria-label="Previous task">‹</button><select id="taskSel" aria-label="Choose a task">' + opts + '</select><button type="button" class="ghost sm" data-act="nexttask" aria-label="Next task">›</button></div>' +
+    '<h2>' + esc(t.title) + '<span class="lvl">' + t.level + '</span></h2><p>' + esc(t.brief) + '</p>' +
+    '<div class="examples" aria-label="Examples">' + ex + '</div>' +
+    '<div class="actions">' + (model ? '<button type="button" class="primary sm" data-act="back">Back to my flowchart</button>' : '<button type="button" class="ghost sm" data-act="hint">' + (ST.hint ? 'Hide hint' : 'Hint') + '</button><button type="button" class="ghost sm" data-act="model">Show model answer</button>') + '</div>' +
+    (ST.hint && !model ? '<div class="hintbox">' + esc(t.hint) + '</div>' : '') +
+    (model ? '<div class="hintbox">This is one correct way to draw it. Yours doesn’t have to look identical, as long as it passes the tests.</div>' : '');
+}
+function renderSandboxCard() {
+  $('secTask').innerHTML = '<div class="eyebrow">Sandbox</div><h2>Draw and run anything</h2><p class="dim">Add symbols, type what goes in each one, join them with arrows, then step through it. Use <b>Save SVG</b> to download a picture for your notes or slides.</p>';
+}
+function renderInspector() {
+  var el = $('secInspect'), c = ST.chart, sel = ST.sel;
+  if (!sel) { el.innerHTML = '<div class="eyebrow">Selected</div><p class="dim" style="margin-top:6px">Click a symbol to edit it. Add a new one from the toolbar: if a symbol is selected the new one is joined on automatically. Drag the orange dot onto another symbol to draw an arrow.</p>'; return; }
+  if (sel.type === 'edge') {
+    var e = c.edges.filter(function (x) { return x.id === sel.id; })[0]; if (!e) { el.innerHTML = ''; return; }
+    var l = normLabel(e.label);
+    el.innerHTML = '<div class="eyebrow">Selected arrow</div><div class="chips" style="margin:8px 0"><button type="button" class="chip" data-act="label:Yes" aria-pressed="' + (l === 'yes') + '">Yes</button><button type="button" class="chip" data-act="label:No" aria-pressed="' + (l === 'no') + '">No</button><button type="button" class="chip" data-act="label:" aria-pressed="' + (l === '') + '">No label</button></div><p class="dim">Arrows leaving a decision need a Yes or a No label.</p><div class="actions"><button type="button" class="ghost sm" data-act="delsel">Delete arrow</button></div>';
+    return;
+  }
+  var n = byId(c, sel.id); if (!n) { el.innerHTML = ''; return; }
+  var types = ['term', 'proc', 'io', 'dec', 'sub'].map(function (t) { return '<button type="button" class="chip" data-act="type:' + t + '" aria-pressed="' + (n.type === t) + '">' + TYPE_LABEL[t] + '</button>'; }).join('');
+  var body = n.type === 'term'
+    ? '<div class="chips" style="margin:8px 0"><button type="button" class="chip" data-act="termtext:Start" aria-pressed="' + (/^start/i.test(n.text)) + '">Start</button><button type="button" class="chip" data-act="termtext:Stop" aria-pressed="' + (/^stop/i.test(n.text)) + '">Stop</button></div>'
+    : '<label class="field">What it says<input type="text" id="nodeText" value="' + esc(n.text) + '" placeholder="' + esc(PLACEHOLDER[n.type]) + '" autocomplete="off" spellcheck="false"></label>' +
+      '<div class="insert-row"><span class="dim" style="font-size:0.76rem">Insert</span>' + ['←', '≠', '≤', '≥'].map(function (s) { return '<button type="button" class="chip mono" data-act="ins:' + s + '">' + s + '</button>'; }).join('') + '</div>';
+  el.innerHTML = '<div class="eyebrow">Selected symbol</div><div class="chips" style="margin:8px 0">' + types + '</div>' + body + '<p class="dim" style="margin-top:8px">' + TYPE_HINT[n.type] + '</p><div class="actions"><button type="button" class="ghost sm" data-act="delsel">Delete symbol</button></div>';
+}
+$('secInspect').addEventListener('focusin', function (e) { if (e.target.id === 'nodeText') ST.typedSnap = snap(); });
+$('secInspect').addEventListener('input', function (e) {
+  if (e.target.id !== 'nodeText' || !ST.sel) return;
+  var n = byId(ST.chart, ST.sel.id); if (!n) return;
+  var inp = e.target, v = inp.value, pos = inp.selectionStart;
+  if (v.indexOf('<-') >= 0) { var before = v.slice(0, pos).split('<-').length - 1; v = v.replace(/<-/g, '←'); inp.value = v; try { inp.setSelectionRange(pos - before, pos - before); } catch (x) { /* ignore */ } }
+  if (ST.typedSnap) { pushHist(ST.typedSnap); ST.typedSnap = null; }
+  n.text = v; changed(); drawChart();
+});
+
+/* ---------- build: checking ---------- */
+function doCheck() {
+  var g = gradeTask(ST.chart, task());
+  ST.results = g; ST.marks = {};
+  g.check.issues.forEach(function (i) { if (i.node && i.sev === 'error') ST.marks[i.node] = 'bad'; });
+  if (g.all && !solved[task().id]) { solved[task().id] = true; save(K_SOLVED, solved); }
+  renderSide(); drawChart();
+}
+function renderResults() {
+  var el = $('secCheck'), g = ST.results, h = '';
+  h += '<div class="actions" style="margin:0 0 8px"><button type="button" class="primary" data-act="check">Check my flowchart</button></div>';
+  if (!g) { el.innerHTML = h + '<p class="dim">Marks your flowchart against ' + task().tests.length + ' test cases and checks the symbols and arrows.</p>'; return; }
+  if (g.all) h += '<div class="banner ok">All ' + g.tests.length + ' tests passed and the structure is sound. Task complete.</div>';
+  else h += '<div class="banner bad">' + g.passed + ' of ' + g.tests.length + ' tests passed' + (g.check.errors ? ' · ' + g.check.errors + ' structure problem' + (g.check.errors > 1 ? 's' : '') : '') + '</div>';
+  if (g.check.issues.length) {
+    h += '<div class="eyebrow" style="margin:10px 0 2px">Structure</div>';
+    g.check.issues.forEach(function (i, ix) { h += '<button type="button" class="issue" data-act="issue:' + ix + '"><span class="tag ' + (i.sev === 'warn' ? 'warn' : '') + '">' + (i.sev === 'warn' ? 'Note' : 'Fix') + '</span><span>' + esc(i.msg) + '</span></button>'; });
+  }
+  h += '<div class="eyebrow" style="margin:10px 0 2px">Tests</div>';
+  g.tests.forEach(function (t, i) {
+    h += '<div class="trow ' + (t.pass ? 'ok' : 'bad') + '"><span class="m">' + (t.pass ? '✔' : '✘') + '</span><div class="tx">' + (t.in.length ? 'Input ' + esc(t.in.map(fmt).join(', ')) : 'No input') + ' → ' + esc(t.exp.join(', ')) +
+      (t.pass ? '' : '<div class="why">' + esc(t.why) + '</div>') + '</div><button type="button" class="ghost sm" data-act="trace:' + i + '">Trace</button></div>';
+  });
+  if (g.all) {
+    var idx = pool().map(function (x) { return x.id; }).indexOf(task().id), nxt = pool().filter(function (x) { return !solved[x.id]; })[0];
+    h += '<div class="actions">' + (nxt ? '<button type="button" class="primary sm" data-act="nexttask">Next task</button>' : '') + '<button type="button" class="ghost sm" data-act="model">Compare with model answer</button></div>';
+  }
+  el.innerHTML = h;
+}
+
+/* ---------- stepper ---------- */
+function parseInputs() { return $('runIn').value.split(/[,\n]+/).map(function (s) { return s.trim(); }).filter(function (s) { return s.length; }); }
+function resetRun(quiet) {
+  stopPlay(); ST.run = null; ST.hl = null;
+  if (!quiet) { renderRun(); drawChart(); } else renderRun();
+}
+function ensureRun() { if (!ST.run) ST.run = new Runner(current(), ST.runFixed ? ST.runFixed : parseInputs()); return ST.run; }
+function stepOnce() {
+  var r = ensureRun();
+  if (r.status === 'waiting' && !r.queue.length) { renderRun(); return; }
+  r.step();
+  ST.hl = { cur: r.last, edge: r.lastEdge, vis: r.visits };
+  if (r.status === 'done' || r.status === 'error' || r.status === 'loop') stopPlay();
+  renderRun(); drawChart();
+  if (r.status === 'waiting') { var p = $('promptIn'); if (p && !ST.play) p.focus(); }
+}
+function stopPlay() { if (ST.play) { clearInterval(ST.play); ST.play = null; } var b = $('playBtn'); if (b) b.textContent = 'Play'; }
+function togglePlay() {
+  if (ST.play) { stopPlay(); return; }
+  var r = ensureRun(); if (r.status === 'done' || r.status === 'error' || r.status === 'loop') { ST.run = null; ST.hl = null; ensureRun(); }
+  $('playBtn').textContent = 'Pause';
+  ST.play = setInterval(stepOnce, 420);
+}
+function renderRun() {
+  var r = ST.run, st = $('runStatus'), pr = $('runPrompt');
+  var done = r && (r.status === 'done' || r.status === 'error' || r.status === 'loop');
+  $('stepBtn').disabled = !!done;
+  if (!r) { st.className = 'status'; st.textContent = 'Ready. Press Step to run the first symbol.'; pr.hidden = true; $('runVars').innerHTML = '<span class="dim">No variables yet</span>'; $('runOut').innerHTML = ''; return; }
+  if (r.status === 'done') { st.className = 'status done'; st.textContent = 'Finished at Stop.'; }
+  else if (r.status === 'error' || r.status === 'loop') { st.className = 'status err'; st.textContent = r.err.msg + '.'; }
+  else if (r.status === 'waiting') { st.className = 'status'; st.textContent = 'Waiting for an input…'; }
+  else { st.className = 'status'; st.textContent = 'Running… ' + r.steps + ' step' + (r.steps === 1 ? '' : 's') + ' so far.'; }
+  pr.hidden = r.status !== 'waiting';
+  if (r.status === 'waiting') $('promptLabel').textContent = 'INPUT ' + r.waitFor + ' =';
+  var names = Object.keys(r.vars);
+  $('runVars').innerHTML = names.length ? names.map(function (k) { return '<span class="var">' + esc(k) + ' = <b>' + esc(showVal(r.vars[k])) + '</b></span>'; }).join('') : '<span class="dim">No variables yet</span>';
+  $('runOut').innerHTML = r.out.map(function (o) { return '<div>' + esc(o) + '</div>'; }).join('');
+}
+
+/* ---------- trace mode ---------- */
+function newTrace() {
+  ST.q = makeTraceQuestion(settings.level, ST.q && ST.q.task.id); ST.answered = false; ST.stepper = false; ST.qText = ''; ST.marks = {}; resetRun(true);
+}
+function renderTrace() {
+  var q = ST.q; if (!q) return;
+  var ask = q.type === 'out' ? 'What is output? Type everything that is output, in order, separated by commas.' : 'What is the value of <b>' + esc(q.varName) + '</b> when the flowchart reaches Stop?';
+  var h = '<div class="eyebrow">Trace it · ' + q.task.level + '</div><h2>' + esc(q.task.title) + '</h2>' +
+    '<p>' + (q.inputs.length ? 'Inputs, in order: <b style="font-family:var(--mono)">' + esc(q.inputs.map(fmt).join(', ')) + '</b>' : 'This flowchart takes no input.') + '</p><p>' + ask + '</p>';
+  if (!ST.answered) h += '<label class="field">Your answer<input type="text" id="qIn" value="' + esc(ST.qText) + '" autocomplete="off" spellcheck="false"></label><div class="actions"><button type="button" class="primary" data-act="qcheck">Check</button><button type="button" class="ghost" data-act="qshow">Show me</button></div>';
+  else {
+    h += '<p class="fb ' + (ST.picked ? 'ok' : 'bad') + '">' + (ST.picked ? 'Correct!' : 'Not quite.') + ' The answer is <span style="font-family:var(--mono)">' + esc(q.answer.join(', ')) + '</span>.</p>' +
+      '<div class="actions"><button type="button" class="primary" data-act="qnext">Next</button><button type="button" class="ghost" data-act="qstep">' + (ST.stepper ? 'Hide stepper' : 'Step through it') + '</button></div>';
+  }
+  $('secTask').innerHTML = h;
+}
+function checkTrace() {
+  var inp = $('qIn'); if (!inp) return;
+  ST.qText = inp.value; if (!inp.value.trim()) { inp.focus(); return; }
+  var ok = checkTraceAnswer(ST.q, inp.value);
+  record(ok); ST.answered = true; ST.picked = ok; renderSide();
+}
+
+/* ---------- spot mode ---------- */
+function newSpot() {
+  var q = makeSpotQuestion(settings.level, ST.q && ST.q.task && ST.q.task.id);
+  ST.q = q; ST.answered = false; ST.picked = null; ST.stepper = false; ST.marks = {}; resetRun(true);
+  if (q) q.inputs = null;
+}
+function renderSpot() {
+  var q = ST.q; if (!q) { $('secTask').innerHTML = '<p>Couldn’t build a question. Try another level.</p>'; return; }
+  var h = '<div class="eyebrow">Spot the error · ' + q.task.level + '</div><h2>' + esc(q.task.title) + '</h2><p class="dim">What this flowchart is meant to do: ' + esc(q.task.brief) + '</p><p>' + esc(q.symptom) + '</p>';
+  if (!ST.answered) h += '<p><b>Click the symbol that is wrong.</b> <span class="dim">(If the Yes/No labels are swapped, click the decision.)</span></p><div class="actions"><button type="button" class="ghost" data-act="sshow">Show me</button></div>';
+  else h += '<p class="fb ' + (ST.picked === q.faulty ? 'ok' : 'bad') + '">' + (ST.picked === q.faulty ? 'Found it!' : ST.picked ? 'Not that one.' : 'Here it is.') + '</p><div class="explain">' + esc(q.explain) + '</div><div class="actions"><button type="button" class="primary" data-act="snext">Next</button></div>';
+  $('secTask').innerHTML = h;
+}
+function answerSpot(id) {
+  var q = ST.q; ST.answered = true; ST.picked = id;
+  var ok = id === q.faulty; record(ok);
+  ST.marks = {}; ST.marks[q.faulty] = 'ok'; if (!ok && id) ST.marks[id] = 'wrong';
+  renderSide(); drawChart();
+}
+function record(ok) {
+  stats.answered++;
+  if (ok) { stats.correct++; stats.streak++; stats.best = Math.max(stats.best, stats.streak); } else stats.streak = 0;
+  save(K_STATS, stats);
+}
+
+/* ---------- settings / modes ---------- */
+function renderSeg(el, items, val) { el.innerHTML = items.map(function (i) { return '<button type="button" data-v="' + i.id + '" aria-pressed="' + (i.id === val) + '">' + esc(i.label) + '</button>'; }).join(''); }
+function renderTop() {
+  renderSeg($('segMode'), MODES, settings.mode); renderSeg($('segLevel'), LEVELS, settings.level);
+  $('levelRow').hidden = settings.mode === 'sandbox';
+  $('modeNote').textContent = NOTES[settings.mode];
+}
+function fitTaskToLevel() {
+  var p = pool();
+  if (!p.some(function (t) { return t.id === settings.task; })) settings.task = (p.filter(function (t) { return !solved[t.id]; })[0] || p[0]).id;
+}
+function enterMode() {
+  stopPlay(); ST.run = null; ST.hl = null; ST.sel = null; ST.results = null; ST.marks = {}; ST.view = 'mine'; ST.hist = []; ST.fut = []; ST.conn = null; ST.hint = false; ST.stepper = false; ST.clearArm = false;
+  var m = settings.mode;
+  if (m === 'build') { fitTaskToLevel(); ST.chart = loadWork(); $('runIn').value = task().tests[0].in.join(', '); }
+  else if (m === 'sandbox') { ST.chart = loadWork(); $('runIn').value = ''; }
+  else if (m === 'trace') newTrace();
+  else newSpot();
+  save(K_SET, settings); renderTop(); renderSide(); drawChart();
+  $('canvasWrap').scrollTop = 0;
+}
+function gotoTask(id) {
+  settings.task = id; ST.hint = false; ST.view = 'mine'; ST.sel = null; ST.hist = []; ST.fut = []; ST.results = null; ST.marks = {};
+  resetRun(true); ST.chart = loadWork(); $('runIn').value = task().tests[0].in.join(', ');
+  save(K_SET, settings); renderSide(); drawChart();
+}
+
+/* ---------- save svg ---------- */
+function saveSVG() {
+  var chart = current(); if (!chart.nodes.length) { toast('Nothing to save yet', true); return; }
+  var m = chartMarkup(chart, { edit: false, hl: null, marks: {}, sel: null }), cs = getComputedStyle(document.documentElement);
+  function res(t) { return t.replace(/var\((--[a-z0-9-]+)\)/g, function (_, v) { return cs.getPropertyValue(v).trim() || '#000'; }); }
+  var css = res(CHART_CSS).replace(/IBM Plex Mono[^;}]*/g, 'ui-monospace,Menlo,Consolas,monospace').replace(/IBM Plex Sans[^;}]*/g, 'system-ui,sans-serif');
+  var defs = ['fc-arr:--ink-dim'].map(function (x) { var p = x.split(':'); return '<marker id="' + p[0] + '" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="' + cs.getPropertyValue(p[1]).trim() + '"/></marker>'; }).join('');
+  var bg = cs.getPropertyValue('--panel').trim();
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + m.vb.join(' ') + '" width="' + Math.round(m.vb[2]) + '" height="' + Math.round(m.vb[3]) + '"><style>' + css + '</style><defs>' + defs + '</defs><rect x="' + m.vb[0] + '" y="' + m.vb[1] + '" width="' + m.vb[2] + '" height="' + m.vb[3] + '" fill="' + bg + '"/>' + m.g + '</svg>';
+  try {
+    var url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' })), a = document.createElement('a');
+    a.href = url; a.download = 'flowchart.svg'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function () { URL.revokeObjectURL(url); }, 500);
+    toast('Saved flowchart.svg');
+  } catch (e) { toast('Your browser blocked the download', true); }
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b) return;
+  var a = b.getAttribute('data-act'), parts = a.split(':'), act = parts[0];
+  if (act !== 'clear' && ST.clearArm) { ST.clearArm = false; syncTools(); }
+  switch (act) {
+    case 'add': addNode(parts[1], parts.slice(2).join(':')); break;
+    case 'connect': ST.conn = ST.conn ? null : { from: null }; ST.marks = {}; if (ST.conn) toast('Click the symbol the arrow starts from'); syncTools(); drawChart(); break;
+    case 'undo': undo(); break;
+    case 'redo': redo(); break;
+    case 'delsel': deleteSel(); break;
+    case 'clear':
+      if (!editable()) break;
+      if (!ST.clearArm) { ST.clearArm = true; syncTools(); setTimeout(function () { ST.clearArm = false; syncTools(); }, 2500); break; }
+      ST.clearArm = false; pushHist(); ST.chart = starterChart(); ST.sel = null; changed(); renderSide(); drawChart(); break;
+    case 'savesvg': saveSVG(); break;
+    case 'type': if (editable() && ST.sel) { var n = byId(ST.chart, ST.sel.id); if (n && n.type !== parts[1]) { pushHist(); n.type = parts[1]; if (n.type === 'term' && !termRole(n)) n.text = 'Stop'; changed(); renderSide(); drawChart(); } } break;
+    case 'termtext': if (editable() && ST.sel) { var t = byId(ST.chart, ST.sel.id); if (t) { pushHist(); t.text = parts[1]; changed(); renderSide(); drawChart(); } } break;
+    case 'label': if (editable() && ST.sel && ST.sel.type === 'edge') { var ed = ST.chart.edges.filter(function (x) { return x.id === ST.sel.id; })[0]; if (ed) { pushHist(); ed.label = parts[1]; changed(); renderSide(); drawChart(); } } break;
+    case 'ins': { var inp = $('nodeText'); if (inp && ST.sel) { var s = inp.selectionStart == null ? inp.value.length : inp.selectionStart, en = inp.selectionEnd == null ? s : inp.selectionEnd; if (!ST.typedSnap) ST.typedSnap = snap(); pushHist(ST.typedSnap); ST.typedSnap = null; inp.value = inp.value.slice(0, s) + parts[1] + inp.value.slice(en); byId(ST.chart, ST.sel.id).text = inp.value; inp.focus(); inp.setSelectionRange(s + 1, s + 1); changed(); drawChart(); } break; }
+    case 'check': doCheck(); break;
+    case 'issue': { var iss = ST.results && ST.results.check.issues[+parts[1]]; if (iss && iss.node) select({ type: 'node', id: iss.node }); else if (iss && iss.edge) select({ type: 'edge', id: iss.edge }); break; }
+    case 'trace': { var tt = task().tests[+parts[1]]; $('runIn').value = tt.in.join(', '); resetRun(); $('secRun').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break; }
+    case 'hint': ST.hint = !ST.hint; renderSide(); break;
+    case 'model': ST.view = 'model'; ST.model = taskChart(task()); ST.sel = null; resetRun(true); renderSide(); drawChart(); break;
+    case 'back': ST.view = 'mine'; resetRun(true); renderSide(); drawChart(); break;
+    case 'prevtask': case 'nexttask': { var p = pool(), i = p.map(function (x) { return x.id; }).indexOf(settings.task); i = (i + (act === 'nexttask' ? 1 : -1) + p.length) % p.length;
+      if (act === 'nexttask' && ST.results && ST.results.all) { var nx = p.filter(function (x) { return !solved[x.id]; })[0]; if (nx) { gotoTask(nx.id); break; } }
+      gotoTask(p[i].id); break; }
+    case 'step': if (ST.hl === null && !ST.run) ensureRun(); stepOnce(); break;
+    case 'play': togglePlay(); break;
+    case 'resetrun': resetRun(); break;
+    case 'enterinput': { var pi = $('promptIn'); if (ST.run && ST.run.status === 'waiting' && pi.value.trim() !== '') { ST.run.provide(pi.value.trim()); pi.value = ''; stepOnce(); } break; }
+    case 'qcheck': checkTrace(); break;
+    case 'qshow': { var q = ST.q; ST.qText = ''; record(false); ST.answered = true; ST.picked = false; renderSide(); break; }
+    case 'qnext': newTrace(); renderSide(); drawChart(); break;
+    case 'qstep': ST.stepper = !ST.stepper; resetRun(true); renderSide(); drawChart(); break;
+    case 'sshow': record(false); ST.answered = true; ST.picked = null; ST.marks = {}; ST.marks[ST.q.faulty] = 'ok'; renderSide(); drawChart(); break;
+    case 'snext': newSpot(); renderSide(); drawChart(); break;
+  }
+});
+document.addEventListener('keydown', function (e) {
+  var tag = (e.target.tagName || '').toLowerCase(), typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+  if (e.target.id === 'qIn' && e.key === 'Enter') { checkTrace(); return; }
+  if (e.target.id === 'promptIn' && e.key === 'Enter') { var pi = e.target; if (ST.run && ST.run.status === 'waiting' && pi.value.trim() !== '') { ST.run.provide(pi.value.trim()); pi.value = ''; stepOnce(); } return; }
+  if (e.target.id === 'runIn' && e.key === 'Enter') { resetRun(); return; }
+  if ((e.ctrlKey || e.metaKey) && !typing && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
+  if ((e.ctrlKey || e.metaKey) && !typing && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+  if (typing) { if (e.key === 'Escape') e.target.blur(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && editable() && ST.sel) { e.preventDefault(); deleteSel(); }
+  else if (e.key === 'Escape') { if (ST.conn) { ST.conn = null; ST.marks = {}; syncTools(); drawChart(); } else if (ST.sel) select(null); }
+});
+$('segMode').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || b.dataset.v === settings.mode) return; settings.mode = b.dataset.v; enterMode(); });
+$('segLevel').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b || b.dataset.v === settings.level) return; settings.level = b.dataset.v; ST.q = null; enterMode(); });
+document.addEventListener('change', function (e) { if (e.target.id === 'taskSel') gotoTask(e.target.value); });
+$('runIn').addEventListener('input', function () { if (ST.run) resetRun(); });
+
+/* ---------- go ---------- */
+enterMode();
+window.__fl = { ST: ST, settings: settings, addNode: addNode, addEdge: addEdge, doCheck: doCheck, gotoTask: gotoTask, enterMode: enterMode, current: current, solved: solved, stepOnce: stepOnce };
+})();
+
+</script>
+</body></html>
